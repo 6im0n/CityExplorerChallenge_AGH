@@ -1,10 +1,14 @@
 package com.example.cityexplorerchallenge_agh
 
 import android.os.Bundle
+import android.view.View
+import android.widget.Button
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.Fragment
 
 class MenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -16,5 +20,59 @@ class MenuActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
+        findViewById<Button>(R.id.viewCurrentChallengeButton).setOnClickListener {
+            showCurrentChallenges()
+        }
+        findViewById<Button>(R.id.viewMap).setOnClickListener {
+            showMap()
+        }
+        findViewById<Button>(R.id.selectNewChallengeButton).setOnClickListener {
+            showNearbyChallenges()
+        }
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (findViewById<View>(R.id.menuFragmentContainer).visibility == View.VISIBLE) {
+                        showMenu()
+                    } else {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            }
+        )
+    }
+
+    fun showMenu() {
+        supportFragmentManager.findFragmentById(R.id.menuFragmentContainer)?.let { fragment ->
+            supportFragmentManager.beginTransaction()
+                .remove(fragment)
+                .commit()
+        }
+        findViewById<View>(R.id.menuFragmentContainer).visibility = View.GONE
+        findViewById<View>(R.id.mainMenu).visibility = View.VISIBLE
+    }
+
+    fun showCurrentChallenges() {
+        showFragment(ListActualChallenge())
+    }
+
+    fun showNearbyChallenges() {
+        showFragment(ListNearbyChallenge())
+    }
+
+    fun showMap() {
+        showFragment(MapView())
+    }
+
+    private fun showFragment(fragment: Fragment) {
+        findViewById<View>(R.id.mainMenu).visibility = View.GONE
+        findViewById<View>(R.id.menuFragmentContainer).visibility = View.VISIBLE
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.menuFragmentContainer, fragment)
+            .commit()
     }
 }
