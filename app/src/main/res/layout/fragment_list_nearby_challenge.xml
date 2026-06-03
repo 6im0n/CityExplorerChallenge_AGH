@@ -27,7 +27,7 @@
     <ListView
         android:id="@+id/nearbyChallengeList"
         android:layout_width="0dp"
-        android:layout_height="392dp"
+        android:layout_height="450dp"
         android:layout_marginStart="32dp"
         android:layout_marginTop="24dp"
         android:layout_marginEnd="32dp"

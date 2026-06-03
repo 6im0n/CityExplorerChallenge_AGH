@@ -27,38 +27,22 @@
     <ListView
         android:id="@+id/currentChallengeList"
         android:layout_width="0dp"
-        android:layout_height="392dp"
+        android:layout_height="0dp"
         android:layout_marginStart="32dp"
         android:layout_marginTop="24dp"
         android:layout_marginEnd="32dp"
+        android:layout_marginBottom="24dp"
         android:cacheColorHint="@android:color/transparent"
         android:choiceMode="singleChoice"
         android:clipToPadding="false"
         android:divider="@android:color/transparent"
         android:dividerHeight="8dp"
         android:scrollbars="vertical"
-        app:layout_constrainedHeight="true"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/currentChallengeListTitle"
         tools:listitem="@layout/item_challenge" />
-
-    <Button
-        android:id="@+id/loadMoreChallengesButton"
-        android:layout_width="0dp"
-        android:layout_height="52dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:backgroundTint="@color/accent_primary"
-        android:text="Load more"
-        android:textAllCaps="false"
-        android:textColor="@color/main"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/currentChallengeList" />
 
     <LinearLayout
         android:id="@+id/bottomNavigation"

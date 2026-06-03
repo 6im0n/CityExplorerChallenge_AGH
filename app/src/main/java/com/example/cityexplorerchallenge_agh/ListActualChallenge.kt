@@ -29,8 +29,6 @@ class ListActualChallenge : Fragment() {
     )
 
     private lateinit var adapter: ChallengeAdapter
-    private lateinit var loadMoreButton: Button
-    private var visibleCount = CHALLENGES_PER_PAGE
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -46,12 +44,6 @@ class ListActualChallenge : Fragment() {
         adapter = ChallengeAdapter(requireContext())
         view.findViewById<ListView>(R.id.currentChallengeList).adapter = adapter
 
-        loadMoreButton = view.findViewById(R.id.loadMoreChallengesButton)
-        loadMoreButton.setOnClickListener {
-            visibleCount = (visibleCount + CHALLENGES_PER_PAGE).coerceAtMost(allChallenges.size)
-            refreshChallengeList()
-        }
-
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMenu()
         }
@@ -64,16 +56,11 @@ class ListActualChallenge : Fragment() {
     }
 
     private fun refreshChallengeList() {
-        val visibleChallenges = allChallenges.take(visibleCount)
-        adapter.submitList(visibleChallenges)
-
-        loadMoreButton.isEnabled = visibleCount < allChallenges.size
-        loadMoreButton.text = if (loadMoreButton.isEnabled) "Load more" else "All loaded"
+        adapter.submitList(allChallenges)
     }
 
     private fun deleteChallenge(challenge: Challenge) {
         allChallenges.remove(challenge)
-        visibleCount = visibleCount.coerceAtMost(allChallenges.size)
         refreshChallengeList()
     }
 
@@ -123,9 +110,5 @@ class ListActualChallenge : Fragment() {
 
             return row
         }
-    }
-
-    companion object {
-        private const val CHALLENGES_PER_PAGE = 5
     }
 }
