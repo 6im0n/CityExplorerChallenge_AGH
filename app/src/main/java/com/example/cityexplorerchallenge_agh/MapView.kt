@@ -1,7 +1,7 @@
 package com.example.cityexplorerchallenge_agh
 
+import android.content.Context
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,7 +21,7 @@ class MapView : Fragment() {
         val context = requireContext().applicationContext
         Configuration.getInstance().load(
             context,
-            PreferenceManager.getDefaultSharedPreferences(context)
+            context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
         )
         Configuration.getInstance().userAgentValue = context.packageName
     }

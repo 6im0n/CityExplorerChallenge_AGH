@@ -81,7 +81,7 @@
                 app:cardBackgroundColor="@color/secondary"
                 app:cardCornerRadius="8dp"
                 app:cardElevation="4dp"
-                android:layout_marginTop="16sp"
+                android:layout_marginTop="16dp"
                 >
 
                 <LinearLayout

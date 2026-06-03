@@ -43,7 +43,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:gravity="center"
-                android:text="Personal expwrap_contentloration assistant that motivates users to discover interesting places around you."
+                android:text="Personal exploration assistant that motivates users to discover interesting places around you."
                 android:textColor="@color/secondary"
                 android:textSize="18sp" />
 
