@@ -1,7 +1,6 @@
 package com.example.cityexplorerchallenge_agh
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,7 +11,6 @@ import android.widget.ListView
 import android.widget.RadioButton
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 
 class ListActualChallenge : Fragment() {
     private val allChallenges = mutableListOf(
@@ -55,11 +53,11 @@ class ListActualChallenge : Fragment() {
         }
 
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
-            startActivity(Intent(requireContext(), MenuActivity::class.java))
+            (requireActivity() as? MenuActivity)?.showMenu()
         }
 
         view.findViewById<Button>(R.id.mapButton).setOnClickListener {
-            findNavController().navigate(R.id.action_listActualChallenge_to_mapView)
+            (requireActivity() as? MenuActivity)?.showMap()
         }
 
         refreshChallengeList()
