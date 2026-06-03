@@ -1,6 +1,5 @@
 package com.example.cityexplorerchallenge_agh
 
-import android.content.Intent
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.view.LayoutInflater
@@ -8,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -47,11 +45,11 @@ class MapView : Fragment() {
         }
 
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
-            startActivity(Intent(requireContext(), MenuActivity::class.java))
+            (requireActivity() as? MenuActivity)?.showMenu()
         }
 
         view.findViewById<Button>(R.id.currentChallengeListButton).setOnClickListener {
-            findNavController().navigate(R.id.action_mapView_to_listActualChallenge)
+            (requireActivity() as? MenuActivity)?.showCurrentChallenges()
         }
     }
 

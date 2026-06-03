@@ -8,21 +8,39 @@
     android:background="@color/white"
     tools:context=".MapView">
 
-    <TextView
-        android:id="@+id/mapTitle"
+    <LinearLayout
+        android:id="@+id/mapHeader"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="32dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
         android:gravity="center"
-        android:text="Map"
-        android:textColor="@color/main"
-        android:textSize="30sp"
-        android:textStyle="bold"
+        android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/mapTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Map"
+            android:textColor="@color/main"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/currentChallenge"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Current challenge: N/A"
+            android:textColor="@color/secondary"
+            android:textSize="18sp" />
+    </LinearLayout>
 
     <org.osmdroid.views.MapView
         android:id="@+id/osmMapView"
@@ -35,7 +53,7 @@
         app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/mapTitle" />
+        app:layout_constraintTop_toBottomOf="@id/mapHeader" />
 
     <LinearLayout
         android:id="@+id/bottomNavigation"
