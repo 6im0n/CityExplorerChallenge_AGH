@@ -1,59 +1,129 @@
 package com.example.cityexplorerchallenge_agh
 
+import android.content.Context
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.BaseAdapter
+import android.widget.Button
+import android.widget.ListView
+import android.widget.RadioButton
+import android.widget.TextView
+import androidx.fragment.app.Fragment
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [ListNearbyChallenge.newInstance] factory method to
- * create an instance of this fragment.
- */
 class ListNearbyChallenge : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+    private val allChallenges = mutableListOf(
+        Challenge(1, "Nearby Landmark Route"),
+        Challenge(2, "City Center Discovery"),
+        Challenge(3, "Short Park Walk"),
+        Challenge(4, "Coffee Spot Visit"),
+        Challenge(5, "Local Museum Stop"),
+        Challenge(6, "Street Art Nearby"),
+        Challenge(7, "Bridge Photo Route"),
+        Challenge(8, "Old Building Search"),
+        Challenge(9, "Hidden Square Walk"),
+        Challenge(10, "Waterfront Challenge")
+    )
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
+    private lateinit var adapter: ChallengeAdapter
+    private lateinit var loadMoreButton: Button
+    private var visibleCount = CHALLENGES_PER_PAGE
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
+    ): View {
         return inflater.inflate(R.layout.fragment_list_nearby_challenge, container, false)
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment ListNearbyChallenge.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            ListNearbyChallenge().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        adapter = ChallengeAdapter(requireContext())
+        view.findViewById<ListView>(R.id.nearbyChallengeList).adapter = adapter
+
+        loadMoreButton = view.findViewById(R.id.loadMoreChallengesButton)
+        loadMoreButton.setOnClickListener {
+            visibleCount = (visibleCount + CHALLENGES_PER_PAGE).coerceAtMost(allChallenges.size)
+            refreshChallengeList()
+        }
+
+        view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
+            (requireActivity() as? MenuActivity)?.showMenu()
+        }
+
+        view.findViewById<Button>(R.id.mapButton).setOnClickListener {
+            (requireActivity() as? MenuActivity)?.showMap()
+        }
+
+        refreshChallengeList()
+    }
+
+    private fun refreshChallengeList() {
+        val visibleChallenges = allChallenges.take(visibleCount)
+        adapter.submitList(visibleChallenges)
+
+        loadMoreButton.isEnabled = visibleCount < allChallenges.size
+        loadMoreButton.text = if (loadMoreButton.isEnabled) "Load more" else "All loaded"
+    }
+
+    private fun deleteChallenge(challenge: Challenge) {
+        allChallenges.remove(challenge)
+        visibleCount = visibleCount.coerceAtMost(allChallenges.size)
+        refreshChallengeList()
+    }
+
+    private data class Challenge(
+        val id: Int,
+        val title: String
+    )
+
+    private inner class ChallengeAdapter(context: Context) : BaseAdapter() {
+        private val inflater = LayoutInflater.from(context)
+        private val challenges = mutableListOf<Challenge>()
+        private var selectedChallengeId: Int? = null
+
+        fun submitList(newChallenges: List<Challenge>) {
+            challenges.clear()
+            challenges.addAll(newChallenges)
+
+            if (selectedChallengeId == null || challenges.none { it.id == selectedChallengeId }) {
+                selectedChallengeId = challenges.firstOrNull()?.id
             }
+
+            notifyDataSetChanged()
+        }
+
+        override fun getCount(): Int = challenges.size
+
+        override fun getItem(position: Int): Challenge = challenges[position]
+
+        override fun getItemId(position: Int): Long = challenges[position].id.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val row = convertView ?: inflater.inflate(R.layout.item_challenge, parent, false)
+            val challenge = getItem(position)
+
+            row.findViewById<TextView>(R.id.challengeTitle).text = challenge.title
+            row.findViewById<RadioButton>(R.id.challengeSelectedButton).isChecked =
+                challenge.id == selectedChallengeId
+
+            row.setOnClickListener {
+                selectedChallengeId = challenge.id
+                notifyDataSetChanged()
+            }
+
+            row.findViewById<Button>(R.id.deleteChallengeButton).setOnClickListener {
+                deleteChallenge(challenge)
+            }
+
+            return row
+        }
+    }
+
+    companion object {
+        private const val CHALLENGES_PER_PAGE = 5
     }
 }
