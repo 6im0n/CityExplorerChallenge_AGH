@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_nav"
+    app:startDestination="@id/mainActivity2">
+    <activity
+        android:id="@+id/mainActivity2"
+        android:name="com.example.cityexplorerchallenge_agh.MainActivity"
+        android:label="activity_main"
+        tools:layout="@layout/activity_main" />
+    <activity
+        android:id="@+id/menuActivity"
+        android:name="com.example.cityexplorerchallenge_agh.MenuActivity"
+        android:label="activity_menu"
+        tools:layout="@layout/activity_menu" />
+    <fragment
+        android:id="@+id/mapView"
+        android:name="com.example.cityexplorerchallenge_agh.MapView"
+        android:label="fragment_map_view"
+        tools:layout="@layout/fragment_map_view" >
+        <action
+            android:id="@+id/action_mapView_to_menuActivity"
+            app:destination="@id/menuActivity" />
+        <action
+            android:id="@+id/action_mapView_to_listActualChallenge"
+            app:destination="@id/listActualChallenge" />
+    </fragment>
+    <fragment
+        android:id="@+id/acceptDevicePermissions"
+        android:name="com.example.cityexplorerchallenge_agh.AcceptDevicePermissions"
+        android:label="fragment_accept_device_permissions"
+        tools:layout="@layout/fragment_accept_device_permissions" >
+        <action
+            android:id="@+id/action_acceptDevicePermissions_to_menuActivity2"
+            app:destination="@id/menuActivity" />
+    </fragment>
+    <fragment
+        android:id="@+id/listActualChallenge"
+        android:name="com.example.cityexplorerchallenge_agh.ListActualChallenge"
+        android:label="fragment_list_actual_challenge"
+        tools:layout="@layout/fragment_list_actual_challenge" >
+        <action
+            android:id="@+id/action_listActualChallenge_to_menuActivity"
+            app:destination="@id/menuActivity" />
+        <action
+            android:id="@+id/action_listActualChallenge_to_mapView"
+            app:destination="@id/mapView" />
+    </fragment>
+    <fragment
+        android:id="@+id/listNearbyChallenge"
+        android:name="com.example.cityexplorerchallenge_agh.ListNearbyChallenge"
+        android:label="fragment_list_nearby_challenge"
+        tools:layout="@layout/fragment_list_nearby_challenge" >
+        <action
+            android:id="@+id/action_listNearbyChallenge_to_menuActivity"
+            app:destination="@id/menuActivity" />
+        <action
+            android:id="@+id/action_listNearbyChallenge_to_mapView"
+            app:destination="@id/mapView" />
+    </fragment>
+    <fragment
+        android:id="@+id/list_completed_chalenge"
+        android:name="com.example.cityexplorerchallenge_agh.list_completed_chalenge"
+        android:label="fragment_list_completed_chalenge"
+        tools:layout="@layout/fragment_list_completed_chalenge" >
+        <action
+            android:id="@+id/action_list_completed_chalenge_to_menuActivity"
+            app:destination="@id/menuActivity" />
+        <action
+            android:id="@+id/action_list_completed_chalenge_to_mapView"
+            app:destination="@id/mapView" />
+        <action
+            android:id="@+id/action_list_completed_chalenge_to_completeChalengeInfo"
+            app:destination="@id/completeChalengeInfo" />
+    </fragment>
+    <fragment
+        android:id="@+id/completeChalengeInfo"
+        android:name="com.example.cityexplorerchallenge_agh.completeChalengeInfo"
+        android:label="fragment_complete_chalenge_info"
+        tools:layout="@layout/fragment_complete_chalenge_info" />
+</navigation>
