@@ -59,4 +59,16 @@
             android:id="@+id/action_listNearbyChallenge_to_mapView"
             app:destination="@id/mapView" />
     </fragment>
+    <fragment
+        android:id="@+id/list_completed_chalenge"
+        android:name="com.example.cityexplorerchallenge_agh.list_completed_chalenge"
+        android:label="fragment_list_completed_chalenge"
+        tools:layout="@layout/fragment_list_completed_chalenge" >
+        <action
+            android:id="@+id/action_list_completed_chalenge_to_menuActivity"
+            app:destination="@id/menuActivity" />
+        <action
+            android:id="@+id/action_list_completed_chalenge_to_mapView"
+            app:destination="@id/mapView" />
+    </fragment>
 </navigation>

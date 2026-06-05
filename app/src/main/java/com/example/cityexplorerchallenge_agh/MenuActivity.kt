@@ -27,6 +27,9 @@ class MenuActivity : AppCompatActivity() {
         findViewById<Button>(R.id.viewMap).setOnClickListener {
             showMap()
         }
+        findViewById<Button>(R.id.viewHistory).setOnClickListener {
+            showCompletedChallenges()
+        }
         findViewById<Button>(R.id.selectNewChallengeButton).setOnClickListener {
             showNearbyChallenges()
         }
@@ -62,6 +65,10 @@ class MenuActivity : AppCompatActivity() {
 
     fun showNearbyChallenges() {
         showFragment(ListNearbyChallenge())
+    }
+
+    fun showCompletedChallenges() {
+        showFragment(list_completed_chalenge())
     }
 
     fun showMap() {
