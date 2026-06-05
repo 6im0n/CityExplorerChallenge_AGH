@@ -71,6 +71,22 @@ class MenuActivity : AppCompatActivity() {
         showFragment(list_completed_chalenge())
     }
 
+    fun showCompletedChallengeInfo(
+        title: String,
+        address: String,
+        latitude: Double,
+        longitude: Double
+    ) {
+        showFragment(
+            completeChalengeInfo.newInstance(
+                title = title,
+                address = address,
+                latitude = latitude,
+                longitude = longitude
+            )
+        )
+    }
+
     fun showMap() {
         showFragment(MapView())
     }

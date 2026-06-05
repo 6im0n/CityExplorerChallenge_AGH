@@ -70,5 +70,13 @@
         <action
             android:id="@+id/action_list_completed_chalenge_to_mapView"
             app:destination="@id/mapView" />
+        <action
+            android:id="@+id/action_list_completed_chalenge_to_completeChalengeInfo"
+            app:destination="@id/completeChalengeInfo" />
     </fragment>
+    <fragment
+        android:id="@+id/completeChalengeInfo"
+        android:name="com.example.cityexplorerchallenge_agh.completeChalengeInfo"
+        android:label="fragment_complete_chalenge_info"
+        tools:layout="@layout/fragment_complete_chalenge_info" />
 </navigation>

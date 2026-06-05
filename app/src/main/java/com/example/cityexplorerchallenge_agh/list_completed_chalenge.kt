@@ -9,16 +9,15 @@ import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 
 class list_completed_chalenge : Fragment() {
     private val completedChallenges = listOf(
-        CompletedChallenge(1, "Old Town Photo Hunt"),
-        CompletedChallenge(2, "River Walk Discovery"),
-        CompletedChallenge(3, "Museum Route"),
-        CompletedChallenge(4, "Hidden Park Visit"),
-        CompletedChallenge(5, "City Landmark Sprint")
+        CompletedChallenge(1, "Old Town Photo Hunt", "Rynek Glowny 1, Krakow", 50.0619, 19.9373),
+        CompletedChallenge(2, "River Walk Discovery", "Bulwar Czerwienski, Krakow", 50.0547, 19.9345),
+        CompletedChallenge(3, "Museum Route", "al. 3 Maja 1, Krakow", 50.0591, 19.9237),
+        CompletedChallenge(4, "Hidden Park Visit", "Park Jordana, Krakow", 50.0611, 19.9189),
+        CompletedChallenge(5, "City Landmark Sprint", "Wawel 5, Krakow", 50.0540, 19.9356)
     )
 
     override fun onCreateView(
@@ -46,7 +45,10 @@ class list_completed_chalenge : Fragment() {
 
     private data class CompletedChallenge(
         val id: Int,
-        val title: String
+        val title: String,
+        val address: String,
+        val latitude: Double,
+        val longitude: Double
     )
 
     private inner class CompletedChallengeAdapter(
@@ -67,7 +69,12 @@ class list_completed_chalenge : Fragment() {
 
             row.findViewById<TextView>(R.id.challengeTitle).text = challenge.title
             row.findViewById<Button>(R.id.moreInfoButton).setOnClickListener {
-                Toast.makeText(requireContext(), challenge.title, Toast.LENGTH_SHORT).show()
+                (requireActivity() as? MenuActivity)?.showCompletedChallengeInfo(
+                    title = challenge.title,
+                    address = challenge.address,
+                    latitude = challenge.latitude,
+                    longitude = challenge.longitude
+                )
             }
 
             return row
