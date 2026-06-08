@@ -10,15 +10,21 @@ import android.widget.Button
 import android.widget.ListView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.example.cityexplorerchallenge_agh.storage.AppDatabase
+import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * The challenges the user has finished (state = "finished").
+ * "More info" opens a small map preview of where it was.
+ */
 class list_completed_chalenge : Fragment() {
-    private val completedChallenges = listOf(
-        CompletedChallenge(1, "Old Town Photo Hunt", "Rynek Glowny 1, Krakow", 50.0619, 19.9373),
-        CompletedChallenge(2, "River Walk Discovery", "Bulwar Czerwienski, Krakow", 50.0547, 19.9345),
-        CompletedChallenge(3, "Museum Route", "al. 3 Maja 1, Krakow", 50.0591, 19.9237),
-        CompletedChallenge(4, "Hidden Park Visit", "Park Jordana, Krakow", 50.0611, 19.9189),
-        CompletedChallenge(5, "City Landmark Sprint", "Wawel 5, Krakow", 50.0540, 19.9356)
-    )
+
+    private lateinit var adapter: CompletedChallengeAdapter
+    private lateinit var titleText: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -31,35 +37,46 @@ class list_completed_chalenge : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        view.findViewById<ListView>(R.id.completedChallengeList).adapter =
-            CompletedChallengeAdapter(requireContext(), completedChallenges)
+        titleText = view.findViewById(R.id.completedChallengeListTitle)
+
+        adapter = CompletedChallengeAdapter(requireContext())
+        view.findViewById<ListView>(R.id.completedChallengeList).adapter = adapter
 
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMenu()
         }
-
         view.findViewById<Button>(R.id.mapButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMap()
         }
+
+        loadCompletedChallenges()
     }
 
-    private data class CompletedChallenge(
-        val id: Int,
-        val title: String,
-        val address: String,
-        val latitude: Double,
-        val longitude: Double
-    )
+    private fun loadCompletedChallenges() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val items = withContext(Dispatchers.IO) {
+                AppDatabase.get(requireContext()).challengeDao()
+                    .byState(ChallengeEntity.STATE_FINISHED)
+            }
+            adapter.submit(items)
+            titleText.text =
+                if (items.isEmpty()) "No completed challenges yet" else "Completed challenges"
+        }
+    }
 
-    private inner class CompletedChallengeAdapter(
-        context: Context,
-        private val challenges: List<CompletedChallenge>
-    ) : BaseAdapter() {
+    private inner class CompletedChallengeAdapter(context: Context) : BaseAdapter() {
         private val inflater = LayoutInflater.from(context)
+        private val challenges = mutableListOf<ChallengeEntity>()
+
+        fun submit(newChallenges: List<ChallengeEntity>) {
+            challenges.clear()
+            challenges.addAll(newChallenges)
+            notifyDataSetChanged()
+        }
 
         override fun getCount(): Int = challenges.size
 
-        override fun getItem(position: Int): CompletedChallenge = challenges[position]
+        override fun getItem(position: Int): ChallengeEntity = challenges[position]
 
         override fun getItemId(position: Int): Long = challenges[position].id.toLong()
 
