@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
 
 class MenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,6 +90,17 @@ class MenuActivity : AppCompatActivity() {
 
     fun showMap() {
         showFragment(MapView())
+    }
+
+    fun showMapForChallenge(challenge: ChallengeEntity) {
+        showFragment(
+            MapView.forChallenge(
+                id = challenge.id,
+                title = challenge.title,
+                latitude = challenge.latitude,
+                longitude = challenge.longitude
+            )
+        )
     }
 
     private fun showFragment(fragment: Fragment) {
