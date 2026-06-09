@@ -47,7 +47,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Current Challenge"
+                        android:text="Current Challenges"
                         android:textColor="@color/main"
                         android:textSize="24sp"
                         android:textStyle="bold" />
@@ -66,7 +66,7 @@
                         android:layout_height="52dp"
                         android:layout_marginTop="20dp"
                         android:backgroundTint="@color/main"
-                        android:text="View challenge"
+                        android:text="View challenges"
                         android:textAllCaps="false"
                         android:textColor="@color/white"
                         android:textSize="16sp"
@@ -104,7 +104,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="Select a new challenge and start a fresh exploration route."
+                        android:text="Select new challenges and start a fresh exploration route."
                         android:textColor="@color/main"
                         android:textSize="16sp" />
 
@@ -114,7 +114,7 @@
                         android:layout_height="52dp"
                         android:layout_marginTop="20dp"
                         android:backgroundTint="@color/white"
-                        android:text="Select challenge"
+                        android:text="Select challenges"
                         android:textAllCaps="false"
                         android:textColor="@color/main"
                         android:textSize="16sp"
