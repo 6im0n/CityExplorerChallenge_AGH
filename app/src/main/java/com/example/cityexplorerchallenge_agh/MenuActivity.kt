@@ -150,6 +150,14 @@ class MenuActivity : AppCompatActivity() {
         showFragment(MapView.forPreview(challenge.title, challenge.latitude, challenge.longitude))
     }
 
+    fun showNewChallengeDetails(challenge: NearbyChallenge) {
+        showFragment(ChallengeDetails.forNew(challenge))
+    }
+
+    fun showCurrentChallengeDetails(challenge: ChallengeEntity) {
+        showFragment(ChallengeDetails.forCurrent(challenge))
+    }
+
     fun showMapForChallenge(challenge: ChallengeEntity) {
         showFragment(
             MapView.forChallenge(

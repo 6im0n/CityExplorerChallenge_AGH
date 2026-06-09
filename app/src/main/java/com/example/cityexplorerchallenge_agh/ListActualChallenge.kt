@@ -96,9 +96,9 @@ class ListActualChallenge : Fragment() {
         }
     }
 
-    //Open the map on this challenge; it becomes the "go to" target.
-    private fun openOnMap(challenge: ChallengeEntity) {
-        (requireActivity() as? MenuActivity)?.showMapForChallenge(challenge)
+    // Open the details screen explaining why this challenge was generated.
+    private fun openDetails(challenge: ChallengeEntity) {
+        (requireActivity() as? MenuActivity)?.showCurrentChallengeDetails(challenge)
     }
 
     //Radio tapped: select this challenge, asking first if another one is selected.
@@ -184,8 +184,8 @@ class ListActualChallenge : Fragment() {
             )
             row.findViewById<TextView>(R.id.challengeDistance).text = formatDistance(meters)
 
-            // tap top open on map
-            row.setOnClickListener { openOnMap(challenge) }
+            // Tap the row to see why this challenge was generated.
+            row.setOnClickListener { openDetails(challenge) }
 
             row.findViewById<Button>(R.id.deleteChallengeButton).setOnClickListener {
                 deleteChallenge(challenge)

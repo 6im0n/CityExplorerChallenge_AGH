@@ -25,6 +25,7 @@ import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalTime
 import java.util.Locale
 
 /**
@@ -106,7 +107,14 @@ class ListNearbyChallenge : Fragment() {
                 withContext(Dispatchers.IO) {
                     val places = searchPlaces(userLatitude, userLongitude)
                     val fresh = removeAlreadyShownOrAdded(places, alreadyShown)
-                    ChallengeFinder().suggest(BUDGET, fresh, readHistoryCounts())
+                    val context = ChallengeFinder.Context(
+                        userLatitude = userLatitude,
+                        userLongitude = userLongitude,
+                        historyCount = readHistoryCounts(),
+                        recentCount = recentlyFinishedCounts(),
+                        hourOfDay = LocalTime.now().hour
+                    )
+                    ChallengeFinder().suggest(BUDGET, fresh, context)
                 }
             } catch (e: Exception) {
                 titleText.text = "Nearby challenge list"
@@ -162,6 +170,20 @@ class ListNearbyChallenge : Fragment() {
         for (row in AppDatabase.get(requireContext()).challengeDao().categoryCounts()) {
             val category = runCatching { ChallengeCategory.valueOf(row.category) }.getOrNull()
             if (category != null) counts[category] = row.count
+        }
+        return counts
+    }
+
+    // How many challenges the user finished in the last 24 h, per category (Rule 2).
+    private fun recentlyFinishedCounts(): Map<ChallengeCategory, Int> {
+        val since = System.currentTimeMillis() - 24L * 60 * 60 * 1000
+        val counts = mutableMapOf<ChallengeCategory, Int>()
+        val finished = AppDatabase.get(requireContext()).challengeDao()
+            .byState(ChallengeEntity.STATE_FINISHED)
+        for (row in finished) {
+            if (row.finishedAt < since) continue
+            val category = runCatching { ChallengeCategory.valueOf(row.category) }.getOrNull() ?: continue
+            counts[category] = (counts[category] ?: 0) + 1
         }
         return counts
     }
@@ -239,16 +261,13 @@ class ListNearbyChallenge : Fragment() {
                 addChallenge(challenge)
             }
 
-            // Tap the row to preview the place on the map (read-only).
-            row.setOnClickListener { previewOnMap(challenge) }
+            // Tap the row to see why this challenge was generated.
+            row.setOnClickListener {
+                (requireActivity() as? MenuActivity)?.showNewChallengeDetails(challenge)
+            }
 
             return row
         }
-    }
-
-    // Show this place on a read-only map (no "go to", no completion).
-    private fun previewOnMap(challenge: NearbyChallenge) {
-        (requireActivity() as? MenuActivity)?.showPlacePreview(challenge)
     }
 
     //Friendly distance text for user
