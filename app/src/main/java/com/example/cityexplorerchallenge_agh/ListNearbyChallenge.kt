@@ -251,11 +251,15 @@ class ListNearbyChallenge : Fragment() {
             row.findViewById<TextView>(R.id.nearbyCategory).text = challenge.category.label
             row.findViewById<TextView>(R.id.nearbyTitle).text = challenge.title
 
-            // Distance from the user to this place.
+            // Distance to the place, plus how well it matches (its recommendation
+            // score as a percentage of the best one in the list).
             val meters = DistanceCalcSimple().meters(
                 userLatitude, userLongitude, challenge.latitude, challenge.longitude
             )
-            row.findViewById<TextView>(R.id.nearbyDistance).text = formatDistance(meters)
+            val maxScore = challenges.maxOfOrNull { it.score } ?: 0.0
+            val percent = if (maxScore > 0) Math.round(challenge.score / maxScore * 100).toInt() else 0
+            row.findViewById<TextView>(R.id.nearbyDistance).text =
+                "${formatDistance(meters)} · match $percent%"
 
             row.findViewById<Button>(R.id.nearbyAddButton).setOnClickListener {
                 addChallenge(challenge)

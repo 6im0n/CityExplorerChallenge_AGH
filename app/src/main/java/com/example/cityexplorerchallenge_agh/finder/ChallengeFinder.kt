@@ -44,7 +44,17 @@ class ChallengeFinder {
         for ((category, count) in quota) {
             suggestions += pickClosest(found.getValue(category), count, context)
         }
-        return suggestions.sortedBy { distance(context, it) }
+        // Give each challenge its recommendation score and show the best match first.
+        return suggestions
+            .map { it.copy(score = score(it, context)) }
+            .sortedByDescending { it.score }
+    }
+
+    // A challenge's score = how good a match it is. Combines the category weight
+    // (variety + recent + time rules) with how close the place is.
+    private fun score(place: NearbyChallenge, context: Context): Double {
+        val distanceScore = 1.0 / (1.0 + distance(context, place) / 500.0) // closer = higher
+        return categoryWeight(place.category, context) * distanceScore
     }
 
     private fun pickClosest(
@@ -88,7 +98,7 @@ class ChallengeFinder {
     private fun categoryWeight(category: ChallengeCategory, context: Context): Double {
         var weight = 1.0 / (1 + (context.historyCount[category] ?: 0))
 
-        weight *= 1.0 / (1 + (context.recentCount[category] ?: 0))
+        weight *= 2.0 / (1 + (context.recentCount[category] ?: 0))
 
         weight *= timeFactor(category, context.hourOfDay)
 
