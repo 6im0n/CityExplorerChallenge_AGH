@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -87,6 +88,11 @@ class MapView : Fragment() {
         }
         osmMapView = map
 
+        // Opened without a target? Use the challenge the user selected in the list.
+        if (!hasTarget) {
+            adoptSelectedChallenge()
+        }
+
         if (hasTarget) {
             showTarget(map)
             startCompletionWatch()
@@ -95,12 +101,24 @@ class MapView : Fragment() {
             map.controller.setCenter(GeoPoint(center.first, center.second))
         }
 
+        view.findViewById<TextView>(R.id.currentChallenge).text =
+            if (hasTarget) "Current challenge: $targetTitle" else "Current challenge: none"
+
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMenu()
         }
         view.findViewById<Button>(R.id.currentChallengeListButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showCurrentChallenges()
         }
+    }
+
+    /** Pick up the challenge the user selected in the current list, if any. */
+    private fun adoptSelectedChallenge() {
+        val selected = AppDatabase.get(requireContext()).challengeDao().selectedChallenge() ?: return
+        targetId = selected.id
+        targetTitle = selected.title
+        targetLatitude = selected.latitude
+        targetLongitude = selected.longitude
     }
 
     /** Center on the target challenge and drop a pin on it. */
@@ -147,8 +165,9 @@ class MapView : Fragment() {
         stopCompletionWatch()
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                AppDatabase.get(requireContext()).challengeDao()
-                    .setState(targetId, ChallengeEntity.STATE_FINISHED)
+                val dao = AppDatabase.get(requireContext()).challengeDao()
+                dao.setState(targetId, ChallengeEntity.STATE_FINISHED)
+                dao.clearSelection() // the goal is reached; no challenge stays selected
             }
             Toast.makeText(requireContext(), "Challenge completed: $targetTitle", Toast.LENGTH_LONG).show()
             (requireActivity() as? MenuActivity)?.showCompletedChallenges()

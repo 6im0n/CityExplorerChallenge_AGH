@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.ListView
-import android.widget.RadioButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -16,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.cityexplorerchallenge_agh.finder.ChallengeCategory
 import com.example.cityexplorerchallenge_agh.finder.ChallengeFinder
 import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
+import com.example.cityexplorerchallenge_agh.finder.DistanceCalcSimple
 import com.example.cityexplorerchallenge_agh.storage.NearbyChallenge
 import com.example.cityexplorerchallenge_agh.finder.OverpassClient
 import com.example.cityexplorerchallenge_agh.storage.AppDatabase
@@ -40,6 +40,10 @@ class ListNearbyChallenge : Fragment() {
 
     private val suggestions = mutableListOf<NearbyChallenge>()
     private var visibleCount = CHALLENGES_PER_PAGE
+
+    // Where the user is, so each row can show its distance.
+    private var userLatitude = 0.0
+    private var userLongitude = 0.0
 
     private lateinit var adapter: NearbyAdapter
     private lateinit var loadMoreButton: Button
@@ -81,6 +85,8 @@ class ListNearbyChallenge : Fragment() {
     private fun loadSuggestions() {
         titleText.text = "Finding nearby challenges…"
         val location = DeviceLocation().lastKnownOrDefault(requireContext())
+        userLatitude = location.first
+        userLongitude = location.second
 
         viewLifecycleOwner.lifecycleScope.launch {
             val result = try {
@@ -88,7 +94,8 @@ class ListNearbyChallenge : Fragment() {
                     val places = OverpassClient().findPlaces(
                         location.first, location.second, SEARCH_RADIUS_METERS, categories
                     )
-                    ChallengeFinder().suggest(BUDGET, places, readHistoryCounts())
+                    val fresh = removeAlreadyAdded(places)
+                    ChallengeFinder().suggest(BUDGET, fresh, readHistoryCounts())
                 }
             } catch (e: Exception) {
                 titleText.text = "Nearby challenge list"
@@ -105,6 +112,18 @@ class ListNearbyChallenge : Fragment() {
             suggestions.addAll(result)
             visibleCount = CHALLENGES_PER_PAGE
             refreshChallengeList()
+        }
+    }
+
+    /** Drop places the user already has (current or finished), matched by GPS point. */
+    private fun removeAlreadyAdded(
+        places: Map<ChallengeCategory, List<NearbyChallenge>>
+    ): Map<ChallengeCategory, List<NearbyChallenge>> {
+        val taken = AppDatabase.get(requireContext()).challengeDao().allChallenges()
+            .map { it.latitude to it.longitude }
+            .toSet()
+        return places.mapValues { (_, list) ->
+            list.filter { (it.latitude to it.longitude) !in taken }
         }
     }
 
@@ -162,21 +181,31 @@ class ListNearbyChallenge : Fragment() {
         override fun getItemId(position: Int): Long = position.toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val row = convertView ?: inflater.inflate(R.layout.item_challenge, parent, false)
+            val row = convertView ?: inflater.inflate(R.layout.item_nearby_challenge, parent, false)
             val challenge = getItem(position)
 
-            row.findViewById<TextView>(R.id.challengeTitle).text =
-                "${challenge.category.label} • ${challenge.title}"
-            row.findViewById<RadioButton>(R.id.challengeSelectedButton).isChecked = false
+            // Category in its own colour, then the place name.
+            row.findViewById<TextView>(R.id.nearbyCategory).text = challenge.category.label
+            row.findViewById<TextView>(R.id.nearbyTitle).text = challenge.title
 
-            // On this screen the side button adds the challenge.
-            row.findViewById<Button>(R.id.deleteChallengeButton).apply {
-                text = "Add"
-                setOnClickListener { addChallenge(challenge) }
+            // Distance from the user to this place.
+            val meters = DistanceCalcSimple().meters(
+                userLatitude, userLongitude, challenge.latitude, challenge.longitude
+            )
+            row.findViewById<TextView>(R.id.nearbyDistance).text = formatDistance(meters)
+
+            row.findViewById<Button>(R.id.nearbyAddButton).setOnClickListener {
+                addChallenge(challenge)
             }
 
             return row
         }
+    }
+
+    /** Friendly distance text, e.g. "420 m" or "1.3 km". */
+    private fun formatDistance(meters: Double): String {
+        return if (meters < 1000) "${Math.round(meters)} m"
+        else "%.1f km".format(meters / 1000)
     }
 
     companion object {
