@@ -1,8 +1,8 @@
 package com.example.cityexplorerchallenge_agh.finder
 
+import com.example.cityexplorerchallenge_agh.BuildConfig
 import org.json.JSONArray
 import org.json.JSONObject
-import org.osmdroid.library.BuildConfig
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
