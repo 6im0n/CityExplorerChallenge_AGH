@@ -1,15 +1,24 @@
 package com.example.cityexplorerchallenge_agh
 
+import android.location.Geocoder
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
+import com.example.cityexplorerchallenge_agh.storage.AppDatabase
 import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class MenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +44,8 @@ class MenuActivity : AppCompatActivity() {
             showNearbyChallenges()
         }
 
+        refreshStats()
+
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(true) {
@@ -58,6 +69,38 @@ class MenuActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.menuFragmentContainer).visibility = View.GONE
         findViewById<View>(R.id.mainMenu).visibility = View.VISIBLE
+        refreshStats() // numbers may have changed while a fragment was open
+    }
+
+    /** Fill the menu stats: how many challenges and the user's city. */
+    private fun refreshStats() {
+        lifecycleScope.launch {
+            val stats = withContext(Dispatchers.IO) {
+                val dao = AppDatabase.get(this@MenuActivity).challengeDao()
+                val active = dao.byState(ChallengeEntity.STATE_CURRENT).size
+                val finished = dao.byState(ChallengeEntity.STATE_FINISHED).size
+                Triple(active, finished, cityName())
+            }
+            findViewById<TextView>(R.id.statActiveChallenges).text =
+                "You current active challenges: ${stats.first}"
+            findViewById<TextView>(R.id.statFinishedChallenges).text =
+                "You finished challenges: ${stats.second}"
+            findViewById<TextView>(R.id.statCity).text =
+                "Your actual city: ${stats.third}"
+        }
+    }
+
+    /** Turn the user's GPS position into a city name (best effort). */
+    private fun cityName(): String {
+        if (!Geocoder.isPresent()) return "Unknown"
+        val location = DeviceLocation().lastKnownOrDefault(this)
+        return try {
+            val geocoder = Geocoder(this, Locale.getDefault())
+            val address = geocoder.getFromLocation(location.first, location.second, 1)?.firstOrNull()
+            address?.locality ?: address?.subAdminArea ?: address?.adminArea ?: "Unknown"
+        } catch (e: Exception) {
+            "Unknown"
+        }
     }
 
     fun showCurrentChallenges() {

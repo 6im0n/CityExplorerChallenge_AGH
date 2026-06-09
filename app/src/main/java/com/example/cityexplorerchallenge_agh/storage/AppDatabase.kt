@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ChallengeEntity::class], version = 1, exportSchema = false)
+@Database(entities = [ChallengeEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun challengeDao(): ChallengeDao
 
@@ -19,7 +19,11 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "city-explorer-challenges.db"
-                ).allowMainThreadQueries().build()
+                )
+                    .allowMainThreadQueries()
+                    // School project: if the schema changes, just rebuild the database.
+                    .fallbackToDestructiveMigration(true)
+                    .build()
             }
             return instance!!
         }
