@@ -19,7 +19,9 @@ data class ChallengeEntity(
     val address: String,
     val latitude: Double,
     val longitude: Double,
-    val state: String
+    val state: String,
+    // True for the one challenge the user picked as the "go to" target.
+    val selected: Boolean = false
 ) {
     /** Human-readable category name for the list (falls back to the raw value). */
     fun categoryLabel(): String =

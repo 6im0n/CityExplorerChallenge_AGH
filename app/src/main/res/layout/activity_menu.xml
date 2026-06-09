@@ -99,6 +99,7 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/statActiveChallenges"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
@@ -107,6 +108,7 @@
                         android:textSize="16sp" />
 
                     <TextView
+                        android:id="@+id/statFinishedChallenges"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
@@ -115,6 +117,7 @@
                         android:textSize="16sp" />
 
                     <TextView
+                        android:id="@+id/statCity"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"

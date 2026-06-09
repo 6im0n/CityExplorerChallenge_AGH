@@ -10,8 +10,13 @@ import android.widget.Button
 import android.widget.ListView
 import android.widget.RadioButton
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
+import com.example.cityexplorerchallenge_agh.finder.DistanceCalcSimple
 import com.example.cityexplorerchallenge_agh.storage.AppDatabase
 import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +33,13 @@ class ListActualChallenge : Fragment() {
 
     private lateinit var adapter: CurrentAdapter
     private lateinit var titleText: TextView
+
+    // Where the user is, so each row can show its distance.
+    private var userLatitude = 0.0
+    private var userLongitude = 0.0
+
+    // Id of the challenge currently selected as the "go to" target (null if none).
+    private var selectedChallengeId: Int? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,12 +71,17 @@ class ListActualChallenge : Fragment() {
     }
 
     private fun loadCurrentChallenges() {
+        val location = DeviceLocation().lastKnownOrDefault(requireContext())
+        userLatitude = location.first
+        userLongitude = location.second
+
         viewLifecycleOwner.lifecycleScope.launch {
             val items = withContext(Dispatchers.IO) {
                 AppDatabase.get(requireContext()).challengeDao()
                     .byState(ChallengeEntity.STATE_CURRENT)
             }
             adapter.submitList(items)
+            selectedChallengeId = items.firstOrNull { it.selected }?.id
             titleText.text =
                 if (items.isEmpty()) "No current challenges" else "Current challenge list"
         }
@@ -73,6 +90,39 @@ class ListActualChallenge : Fragment() {
     /** Open the map on this challenge; it becomes the "go to" target. */
     private fun openOnMap(challenge: ChallengeEntity) {
         (requireActivity() as? MenuActivity)?.showMapForChallenge(challenge)
+    }
+
+    /** Radio tapped: select this challenge, asking first if another one is selected. */
+    private fun onRadioTapped(challenge: ChallengeEntity) {
+        val current = selectedChallengeId
+        if (current != null && current != challenge.id) {
+            askChangeSelection(challenge)
+        } else {
+            applySelection(challenge)
+        }
+    }
+
+    /** Confirm before replacing an already selected challenge. */
+    private fun askChangeSelection(challenge: ChallengeEntity) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Change selected challenge?")
+            .setMessage("Another challenge is already selected. Select \"${challenge.title}\" instead?")
+            .setPositiveButton("Yes") { _, _ -> applySelection(challenge) }
+            .setNegativeButton("No") { _, _ -> loadCurrentChallenges() }
+            .setOnCancelListener { loadCurrentChallenges() }
+            .show()
+    }
+
+    /** Make this challenge the only selected one, then refresh the list. */
+    private fun applySelection(challenge: ChallengeEntity) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val dao = AppDatabase.get(requireContext()).challengeDao()
+                dao.clearSelection()
+                dao.select(challenge.id)
+            }
+            loadCurrentChallenges()
+        }
     }
 
     private fun deleteChallenge(challenge: ChallengeEntity) {
@@ -105,19 +155,41 @@ class ListActualChallenge : Fragment() {
             val row = convertView ?: inflater.inflate(R.layout.item_challenge, parent, false)
             val challenge = getItem(position)
 
-            row.findViewById<TextView>(R.id.challengeTitle).text =
-                "${challenge.categoryLabel()} • ${challenge.title}"
-            row.findViewById<RadioButton>(R.id.challengeSelectedButton).isChecked = false
+            // Category in its own colour, then the place name.
+            row.findViewById<TextView>(R.id.challengeCategory).text = challenge.categoryLabel()
+            row.findViewById<TextView>(R.id.challengeTitle).text = challenge.title
+
+            // The radio shows and changes which challenge is selected.
+            row.findViewById<RadioButton>(R.id.challengeSelectedButton).apply {
+                isChecked = challenge.selected
+                setOnClickListener { onRadioTapped(challenge) }
+            }
+
+            // Highlight the selected challenge with a different background.
+            val background = if (challenge.selected) R.color.accent_primary else R.color.accent_secondary
+            (row as CardView).setCardBackgroundColor(
+                ContextCompat.getColor(requireContext(), background)
+            )
+
+            // Distance from the user to this place.
+            val meters = DistanceCalcSimple().meters(
+                userLatitude, userLongitude, challenge.latitude, challenge.longitude
+            )
+            row.findViewById<TextView>(R.id.challengeDistance).text = formatDistance(meters)
 
             // Tap the row to open it on the map.
             row.setOnClickListener { openOnMap(challenge) }
 
-            row.findViewById<Button>(R.id.deleteChallengeButton).apply {
-                text = "Delete"
-                setOnClickListener { deleteChallenge(challenge) }
+            row.findViewById<Button>(R.id.deleteChallengeButton).setOnClickListener {
+                deleteChallenge(challenge)
             }
 
             return row
         }
+    }
+
+    private fun formatDistance(meters: Double): String {
+        return if (meters < 1000) "${Math.round(meters)} m"
+        else "%.1f km".format(meters / 1000)
     }
 }
