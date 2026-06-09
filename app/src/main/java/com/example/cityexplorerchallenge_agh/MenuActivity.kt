@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
 import com.example.cityexplorerchallenge_agh.storage.AppDatabase
 import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
+import com.example.cityexplorerchallenge_agh.storage.NearbyChallenge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -121,18 +122,28 @@ class MenuActivity : AppCompatActivity() {
     fun showCompletedChallengeInfo(challenge: ChallengeEntity) {
         showFragment(
             completeChalengeInfo.newInstance(
+                id = challenge.id,
                 title = challenge.title,
                 address = challenge.address,
                 latitude = challenge.latitude,
                 longitude = challenge.longitude,
                 startedAt = challenge.startedAt,
-                finishedAt = challenge.finishedAt
+                finishedAt = challenge.finishedAt,
+                imagePath = challenge.imagePath
             )
         )
     }
 
     fun showMap() {
         showFragment(MapView())
+    }
+
+    fun showPlainMap() {
+        showFragment(MapView.plain())
+    }
+
+    fun showPlacePreview(challenge: NearbyChallenge) {
+        showFragment(MapView.forPreview(challenge.title, challenge.latitude, challenge.longitude))
     }
 
     fun showMapForChallenge(challenge: ChallengeEntity) {

@@ -58,6 +58,10 @@ class MapView : Fragment() {
     private var targetLatitude = 0.0
     private var targetLongitude = 0.0
 
+    // preview = read-only pin (a nearby place); plain = general map, no auto challenge.
+    private var previewMode = false
+    private var plainMode = false
+
     private val hasTarget: Boolean get() = targetId != NO_TARGET
 
     private val locationListener = LocationListener { location ->
@@ -72,6 +76,8 @@ class MapView : Fragment() {
             targetTitle = it.getString(ARG_TITLE)
             targetLatitude = it.getDouble(ARG_LATITUDE)
             targetLongitude = it.getDouble(ARG_LONGITUDE)
+            previewMode = it.getString(ARG_MODE) == MODE_PREVIEW
+            plainMode = it.getString(ARG_MODE) == MODE_PLAIN
         }
 
         val context = requireContext().applicationContext
@@ -100,23 +106,28 @@ class MapView : Fragment() {
         }
         osmMapView = map
 
-        // Opened without a target? Use the challenge the user selected in the list.
-        if (!hasTarget) {
+        // Auto-load the selected challenge only for the normal map (not preview/plain).
+        if (!hasTarget && !previewMode && !plainMode) {
             adoptSelectedChallenge()
         }
 
-        if (hasTarget) {
-            showTarget(map)
-        } else {
-            val center = DeviceLocation().lastKnownOrDefault(requireContext())
-            map.controller.setCenter(GeoPoint(center.first, center.second))
+        when {
+            // Go-to a challenge, or just preview a place: both drop a pin and centre.
+            hasTarget || previewMode -> showTarget(map)
+            else -> {
+                val center = DeviceLocation().lastKnownOrDefault(requireContext())
+                map.controller.setCenter(GeoPoint(center.first, center.second))
+            }
         }
 
-        // Show (and follow) the user's blue dot in both modes.
+        // Show (and follow) the user's blue dot in every mode.
         startLocationWatch()
 
-        view.findViewById<TextView>(R.id.currentChallenge).text =
-            if (hasTarget) "Current challenge: $targetTitle" else "Current challenge: none"
+        view.findViewById<TextView>(R.id.currentChallenge).text = when {
+            hasTarget -> "Current challenge: $targetTitle"
+            previewMode -> "Preview: $targetTitle"
+            else -> "Current challenge: none"
+        }
 
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMenu()
@@ -289,13 +300,18 @@ class MapView : Fragment() {
     private fun completeChallenge() {
         stopLocationWatch()
         viewLifecycleOwner.lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
+            val finished = withContext(Dispatchers.IO) {
                 val dao = AppDatabase.get(requireContext()).challengeDao()
                 dao.markFinished(targetId, System.currentTimeMillis())
                 dao.clearSelection() // the goal is reached; no challenge stays selected
+                dao.byId(targetId)
             }
             Toast.makeText(requireContext(), "Challenge completed: $targetTitle", Toast.LENGTH_LONG).show()
-            (requireActivity() as? MenuActivity)?.showCompletedChallenges()
+
+            val menu = requireActivity() as? MenuActivity
+            // Open the finished challenge so the user can add a photo of it.
+            if (finished != null) menu?.showCompletedChallengeInfo(finished)
+            else menu?.showCompletedChallenges()
         }
     }
 
@@ -323,10 +339,15 @@ class MapView : Fragment() {
         private const val ARG_TITLE = "title"
         private const val ARG_LATITUDE = "latitude"
         private const val ARG_LONGITUDE = "longitude"
+        private const val ARG_MODE = "mode"
+
+        private const val MODE_PREVIEW = "preview"
+        private const val MODE_PLAIN = "plain"
 
         private const val NO_TARGET = -1
         private const val COMPLETION_RADIUS_METERS = 30f
 
+        // Go-to a saved challenge: pin + walking route + 30 m completion.
         fun forChallenge(
             id: Int,
             title: String,
@@ -340,6 +361,25 @@ class MapView : Fragment() {
                     putDouble(ARG_LATITUDE, latitude)
                     putDouble(ARG_LONGITUDE, longitude)
                 }
+            }
+        }
+
+        // Read-only look at a place (a nearby suggestion): just a pin, no completion.
+        fun forPreview(title: String, latitude: Double, longitude: Double): MapView {
+            return MapView().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_MODE, MODE_PREVIEW)
+                    putString(ARG_TITLE, title)
+                    putDouble(ARG_LATITUDE, latitude)
+                    putDouble(ARG_LONGITUDE, longitude)
+                }
+            }
+        }
+
+        // General map of the user's area, without auto-loading any challenge.
+        fun plain(): MapView {
+            return MapView().apply {
+                arguments = Bundle().apply { putString(ARG_MODE, MODE_PLAIN) }
             }
         }
     }

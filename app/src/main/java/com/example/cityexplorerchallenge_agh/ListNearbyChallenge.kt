@@ -75,7 +75,7 @@ class ListNearbyChallenge : Fragment() {
             (requireActivity() as? MenuActivity)?.showMenu()
         }
         view.findViewById<Button>(R.id.mapButton).setOnClickListener {
-            (requireActivity() as? MenuActivity)?.showMap()
+            (requireActivity() as? MenuActivity)?.showPlainMap()
         }
 
         loadSuggestions()
@@ -217,8 +217,16 @@ class ListNearbyChallenge : Fragment() {
                 addChallenge(challenge)
             }
 
+            // Tap the row to preview the place on the map (read-only).
+            row.setOnClickListener { previewOnMap(challenge) }
+
             return row
         }
+    }
+
+    // Show this place on a read-only map (no "go to", no completion).
+    private fun previewOnMap(challenge: NearbyChallenge) {
+        (requireActivity() as? MenuActivity)?.showPlacePreview(challenge)
     }
 
     //Friendly distance text for user
