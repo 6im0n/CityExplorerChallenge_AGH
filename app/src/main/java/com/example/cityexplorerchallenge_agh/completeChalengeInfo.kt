@@ -2,14 +2,19 @@ package com.example.cityexplorerchallenge_agh
 
 import android.content.Context
 import android.location.Geocoder
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.example.cityexplorerchallenge_agh.storage.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -17,6 +22,7 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -24,6 +30,14 @@ import org.osmdroid.views.MapView as OsmMapView
 
 class completeChalengeInfo : Fragment() {
     private var previewMap: OsmMapView? = null
+    private var challengeId = 0
+
+    // Photo picker (no storage permission needed). Saves the chosen image.
+    private val pickImage = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) onImagePicked(uri)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,18 +61,28 @@ class completeChalengeInfo : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        challengeId = arguments?.getInt(ARG_ID) ?: 0
         val title = arguments?.getString(ARG_TITLE).orEmpty().ifBlank { "Completed challenge" }
         val address = arguments?.getString(ARG_ADDRESS).orEmpty()
         val latitude = arguments?.getDouble(ARG_LATITUDE) ?: 50.0647
         val longitude = arguments?.getDouble(ARG_LONGITUDE) ?: 19.9450
         val startedAt = arguments?.getLong(ARG_STARTED) ?: 0L
         val finishedAt = arguments?.getLong(ARG_FINISHED) ?: 0L
+        val imagePath = arguments?.getString(ARG_IMAGE)
         val point = GeoPoint(latitude, longitude)
 
         view.findViewById<TextView>(R.id.challengeName).text = "Name: $title"
         view.findViewById<TextView>(R.id.challengeStarted).text = "Started: ${formatDate(startedAt)}"
         view.findViewById<TextView>(R.id.challengeFinished).text = "Finished: ${formatDate(finishedAt)}"
         showAddress(view.findViewById(R.id.challengeAddress), address, latitude, longitude)
+
+        // Show an existing photo, or let the user add one.
+        if (!imagePath.isNullOrBlank()) showImage(imagePath)
+        view.findViewById<Button>(R.id.addImageButton).setOnClickListener {
+            pickImage.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        }
 
         previewMap = view.findViewById<OsmMapView>(R.id.completedChallengeMap).apply {
             setTileSource(TileSourceFactory.MAPNIK)
@@ -77,10 +101,39 @@ class completeChalengeInfo : Fragment() {
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMenu()
         }
-
         view.findViewById<Button>(R.id.mapButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMap()
         }
+    }
+
+    // A photo was chosen: copy it into app storage, remember it, and show it.
+    private fun onImagePicked(uri: Uri) {
+        val path = copyImageToStorage(uri) ?: return
+        showImage(path)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            AppDatabase.get(requireContext()).challengeDao().setImage(challengeId, path)
+        }
+    }
+
+    // Copy the picked image into the app's own files so it stays available later.
+    private fun copyImageToStorage(uri: Uri): String? {
+        return try {
+            val file = File(requireContext().filesDir, "challenge_$challengeId.jpg")
+            requireContext().contentResolver.openInputStream(uri)?.use { input ->
+                file.outputStream().use { output -> input.copyTo(output) }
+            }
+            file.absolutePath
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun showImage(path: String) {
+        val image = view?.findViewById<ImageView>(R.id.challengeImage) ?: return
+        image.setImageURI(null) // clear cache so a replaced photo really refreshes
+        image.setImageURI(Uri.fromFile(File(path)))
+        image.visibility = View.VISIBLE
+        view?.findViewById<Button>(R.id.addImageButton)?.text = "Change photo"
     }
 
     // Show the saved address, or look one up from the coordinates if we have none.
@@ -128,29 +181,35 @@ class completeChalengeInfo : Fragment() {
     }
 
     companion object {
+        private const val ARG_ID = "id"
         private const val ARG_TITLE = "title"
         private const val ARG_ADDRESS = "address"
         private const val ARG_LATITUDE = "latitude"
         private const val ARG_LONGITUDE = "longitude"
         private const val ARG_STARTED = "started"
         private const val ARG_FINISHED = "finished"
+        private const val ARG_IMAGE = "image"
 
         fun newInstance(
+            id: Int,
             title: String,
             address: String,
             latitude: Double,
             longitude: Double,
             startedAt: Long,
-            finishedAt: Long
+            finishedAt: Long,
+            imagePath: String?
         ): completeChalengeInfo {
             return completeChalengeInfo().apply {
                 arguments = Bundle().apply {
+                    putInt(ARG_ID, id)
                     putString(ARG_TITLE, title)
                     putString(ARG_ADDRESS, address)
                     putDouble(ARG_LATITUDE, latitude)
                     putDouble(ARG_LONGITUDE, longitude)
                     putLong(ARG_STARTED, startedAt)
                     putLong(ARG_FINISHED, finishedAt)
+                    putString(ARG_IMAGE, imagePath)
                 }
             }
         }

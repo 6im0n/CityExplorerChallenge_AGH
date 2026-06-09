@@ -24,65 +24,90 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <LinearLayout
-        android:id="@+id/challengeInfoContent"
+    <ScrollView
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="32dp"
-        android:orientation="vertical"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/completedChallengeInfoTitle">
 
-        <TextView
-            android:id="@+id/challengeName"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/main"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            tools:text="Old Town Photo Hunt" />
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:orientation="vertical"
+            android:paddingBottom="16dp">
 
-        <TextView
-            android:id="@+id/challengeAddress"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:textColor="@color/secondary"
-            android:textSize="16sp"
-            tools:text="Rynek Glowny 1, Krakow" />
+            <TextView
+                android:id="@+id/challengeName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/main"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                tools:text="Old Town Photo Hunt" />
 
-        <TextView
-            android:id="@+id/challengeStarted"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="@color/secondary"
-            android:textSize="16sp"
-            tools:text="Started: 1 Jun 2026, 10:30" />
+            <TextView
+                android:id="@+id/challengeAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/secondary"
+                android:textSize="16sp"
+                tools:text="Rynek Glowny 1, Krakow" />
 
-        <TextView
-            android:id="@+id/challengeFinished"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/secondary"
-            android:textSize="16sp"
-            tools:text="Finished: 1 Jun 2026, 11:15" />
-    </LinearLayout>
+            <TextView
+                android:id="@+id/challengeStarted"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/secondary"
+                android:textSize="16sp"
+                tools:text="Started: 1 Jun 2026, 10:30" />
 
-    <org.osmdroid.views.MapView
-        android:id="@+id/completedChallengeMap"
-        android:layout_width="0dp"
-        android:layout_height="180dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="32dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/challengeInfoContent" />
+            <TextView
+                android:id="@+id/challengeFinished"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/secondary"
+                android:textSize="16sp"
+                tools:text="Finished: 1 Jun 2026, 11:15" />
+
+            <ImageView
+                android:id="@+id/challengeImage"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:layout_marginTop="16dp"
+                android:adjustViewBounds="true"
+                android:background="@color/accent_secondary"
+                android:contentDescription="Challenge photo"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/addImageButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="@color/secondary"
+                android:text="Add photo"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <org.osmdroid.views.MapView
+                android:id="@+id/completedChallengeMap"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:layout_marginTop="16dp" />
+        </LinearLayout>
+    </ScrollView>
 
     <LinearLayout
         android:id="@+id/bottomNavigation"

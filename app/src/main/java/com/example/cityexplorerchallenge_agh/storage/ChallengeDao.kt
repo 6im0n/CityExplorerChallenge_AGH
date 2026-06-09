@@ -20,6 +20,14 @@ interface ChallengeDao {
     @Query("SELECT * FROM challenges")
     fun allChallenges(): List<ChallengeEntity>
 
+    //One challenge by its id.
+    @Query("SELECT * FROM challenges WHERE id = :id")
+    fun byId(id: Int): ChallengeEntity?
+
+    //Attach (or change) the photo path of a challenge.
+    @Query("UPDATE challenges SET imagePath = :path WHERE id = :id")
+    fun setImage(id: Int, path: String)
+
     //Move a challenge to another state (e.g. current -> finished)
     @Query("UPDATE challenges SET state = :state WHERE id = :id")
     fun setState(id: Int, state: String)

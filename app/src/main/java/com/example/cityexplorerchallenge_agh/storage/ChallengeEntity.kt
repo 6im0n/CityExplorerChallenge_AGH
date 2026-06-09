@@ -22,7 +22,9 @@ data class ChallengeEntity(
     val state: String,
     val selected: Boolean = false,
     val startedAt: Long = 0,
-    val finishedAt: Long = 0
+    val finishedAt: Long = 0,
+    // Path to a photo the user attached, in app storage (null = none yet).
+    val imagePath: String? = null
 ) {
     fun categoryLabel(): String =
         runCatching { ChallengeCategory.valueOf(category).label }.getOrDefault(category)
