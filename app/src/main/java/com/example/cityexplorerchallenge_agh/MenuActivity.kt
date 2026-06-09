@@ -74,17 +74,21 @@ class MenuActivity : AppCompatActivity() {
     }
 
     private fun refreshStats() {
-        // Counts come from the database, no location needed.
+        // Counts and the selected challenge come from the database.
         lifecycleScope.launch {
-            val counts = withContext(Dispatchers.IO) {
+            val stats = withContext(Dispatchers.IO) {
                 val dao = AppDatabase.get(this@MenuActivity).challengeDao()
-                dao.byState(ChallengeEntity.STATE_CURRENT).size to
-                    dao.byState(ChallengeEntity.STATE_FINISHED).size
+                val active = dao.byState(ChallengeEntity.STATE_CURRENT).size
+                val finished = dao.byState(ChallengeEntity.STATE_FINISHED).size
+                val selected = dao.selectedChallenge()?.title ?: "None"
+                Triple(active, finished, selected)
             }
             findViewById<TextView>(R.id.statActiveChallenges).text =
-                "You current active challenges: ${counts.first}"
+                "Your current active challenges: ${stats.first}"
             findViewById<TextView>(R.id.statFinishedChallenges).text =
-                "You finished challenges: ${counts.second}"
+                "Your finished challenges: ${stats.second}"
+            findViewById<TextView>(R.id.statSelectedChallenge).text =
+                "Your actual selected challenge: ${stats.third}"
         }
 
         // not perfect, city needs a fresh GPS fix, then a geocoder lookup off the main thread.

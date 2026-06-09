@@ -1,6 +1,7 @@
 package com.example.cityexplorerchallenge_agh
 
 import android.content.Context
+import android.location.Geocoder
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -24,6 +25,7 @@ import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /**
  * "Find new challenge" screen.
@@ -165,22 +167,42 @@ class ListNearbyChallenge : Fragment() {
     }
 
     private fun addChallenge(challenge: NearbyChallenge) {
-        val entity = ChallengeEntity(
-            title = challenge.title,
-            category = challenge.category.name,
-            address = challenge.address,
-            latitude = challenge.latitude,
-            longitude = challenge.longitude,
-            state = ChallengeEntity.STATE_CURRENT,
-            startedAt = System.currentTimeMillis()
-        )
+        // Remember where the user started from (for the distance travelled stat).
+        val startLatitude = userLatitude
+        val startLongitude = userLongitude
+        val context = requireContext().applicationContext
+
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            AppDatabase.get(requireContext()).challengeDao().add(entity)
+            val entity = ChallengeEntity(
+                title = challenge.title,
+                category = challenge.category.name,
+                address = challenge.address,
+                latitude = challenge.latitude,
+                longitude = challenge.longitude,
+                state = ChallengeEntity.STATE_CURRENT,
+                startedAt = System.currentTimeMillis(),
+                startLatitude = startLatitude,
+                startLongitude = startLongitude,
+                city = lookupCity(context, challenge.latitude, challenge.longitude)
+            )
+            AppDatabase.get(context).challengeDao().add(entity)
         }
 
         suggestions.remove(challenge)
         adapter.submitList(suggestions.toList())
         Toast.makeText(requireContext(), "Added: ${challenge.title}", Toast.LENGTH_SHORT).show()
+    }
+
+    // Best-effort city name for a place, used by the history stats.
+    private fun lookupCity(context: Context, latitude: Double, longitude: Double): String? {
+        if (!Geocoder.isPresent()) return null
+        return try {
+            val geocoder = Geocoder(context, Locale.getDefault())
+            val address = geocoder.getFromLocation(latitude, longitude, 1)?.firstOrNull()
+            address?.locality ?: address?.subAdminArea ?: address?.adminArea
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private inner class NearbyAdapter(context: Context) : BaseAdapter() {
