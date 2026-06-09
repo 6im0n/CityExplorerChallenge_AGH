@@ -20,10 +20,8 @@ data class ChallengeEntity(
     val latitude: Double,
     val longitude: Double,
     val state: String,
-    // True for the one challenge the user picked as the "go to" target.
     val selected: Boolean = false
 ) {
-    /** Human-readable category name for the list (falls back to the raw value). */
     fun categoryLabel(): String =
         runCatching { ChallengeCategory.valueOf(category).label }.getOrDefault(category)
 
@@ -33,7 +31,6 @@ data class ChallengeEntity(
     }
 }
 
-/** Result row of "how many challenges per category" (used to adapt suggestions). */
 data class CategoryCount(
     @ColumnInfo(name = "category") val category: String,
     @ColumnInfo(name = "count") val count: Int

@@ -8,38 +8,38 @@ import androidx.room.Query
 @Dao
 interface ChallengeDao {
 
-    /** Save a challenge the user added. */
+    //Save a challenge the user added.
     @Insert
     fun add(challenge: ChallengeEntity)
 
-    /** All challenges in a given state ("current" or "finished"). */
+    //ll challenges in a given state ("current" or "finished").
     @Query("SELECT * FROM challenges WHERE state = :state")
     fun byState(state: String): List<ChallengeEntity>
 
-    /** Every challenge saved, any state. Used to avoid suggesting one twice. */
+    //Every challenge saved, any state. Used to avoid suggesting one twice.
     @Query("SELECT * FROM challenges")
     fun allChallenges(): List<ChallengeEntity>
 
-    /** Move a challenge to another state (e.g. current -> finished). */
+    //Move a challenge to another state (e.g. current -> finished)
     @Query("UPDATE challenges SET state = :state WHERE id = :id")
     fun setState(id: Int, state: String)
 
-    /** Unselect every challenge (only one may be the "go to" target). */
+    //lect every challenge (only one may be the "go to" target)
     @Query("UPDATE challenges SET selected = 0")
     fun clearSelection()
 
-    /** Mark one challenge as the selected "go to" target. */
+    //Mark one challenge as the selected "go to" target
     @Query("UPDATE challenges SET selected = 1 WHERE id = :id")
     fun select(id: Int)
 
-    /** The challenge currently chosen as the "go to" target, if any. */
+    //The challenge currently chosen as the "go to" target, if any.
     @Query("SELECT * FROM challenges WHERE selected = 1 LIMIT 1")
     fun selectedChallenge(): ChallengeEntity?
 
     @Delete
     fun delete(challenge: ChallengeEntity)
 
-    /** Count challenges per category, to adapt future suggestions. */
+    //count challenges per category, to adapt future suggestions
     @Query("SELECT category, COUNT(*) AS count FROM challenges GROUP BY category")
     fun categoryCounts(): List<CategoryCount>
 }

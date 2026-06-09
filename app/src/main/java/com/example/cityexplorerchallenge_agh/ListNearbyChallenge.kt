@@ -81,7 +81,6 @@ class ListNearbyChallenge : Fragment() {
         loadSuggestions()
     }
 
-    /** GPS -> network -> adaptive mix, all off the main thread. */
     private fun loadSuggestions() {
         titleText.text = "Finding nearby challenges…"
         val location = DeviceLocation().lastKnownOrDefault(requireContext())
@@ -115,7 +114,6 @@ class ListNearbyChallenge : Fragment() {
         }
     }
 
-    /** Drop places the user already has (current or finished), matched by GPS point. */
     private fun removeAlreadyAdded(
         places: Map<ChallengeCategory, List<NearbyChallenge>>
     ): Map<ChallengeCategory, List<NearbyChallenge>> {
@@ -127,7 +125,6 @@ class ListNearbyChallenge : Fragment() {
         }
     }
 
-    /** How many challenges per category the user already has (for the adaptation). */
     private fun readHistoryCounts(): Map<ChallengeCategory, Int> {
         val counts = mutableMapOf<ChallengeCategory, Int>()
         for (row in AppDatabase.get(requireContext()).challengeDao().categoryCounts()) {
@@ -137,7 +134,6 @@ class ListNearbyChallenge : Fragment() {
         return counts
     }
 
-    /** Save the challenge as "current" and take it off the suggestions. */
     private fun addChallenge(challenge: NearbyChallenge) {
         val entity = ChallengeEntity(
             title = challenge.title,
@@ -163,7 +159,6 @@ class ListNearbyChallenge : Fragment() {
         loadMoreButton.text = if (loadMoreButton.isEnabled) "Load more" else "All loaded"
     }
 
-    /** Simple list adapter that shows one suggested place per row. */
     private inner class NearbyAdapter(context: Context) : BaseAdapter() {
         private val inflater = LayoutInflater.from(context)
         private val challenges = mutableListOf<NearbyChallenge>()
@@ -202,7 +197,7 @@ class ListNearbyChallenge : Fragment() {
         }
     }
 
-    /** Friendly distance text, e.g. "420 m" or "1.3 km". */
+    //Friendly distance text for user
     private fun formatDistance(meters: Double): String {
         return if (meters < 1000) "${Math.round(meters)} m"
         else "%.1f km".format(meters / 1000)

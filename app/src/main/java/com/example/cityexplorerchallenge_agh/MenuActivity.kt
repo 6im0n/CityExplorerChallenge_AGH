@@ -72,7 +72,6 @@ class MenuActivity : AppCompatActivity() {
         refreshStats() // numbers may have changed while a fragment was open
     }
 
-    /** Fill the menu stats: how many challenges and the user's city. */
     private fun refreshStats() {
         lifecycleScope.launch {
             val stats = withContext(Dispatchers.IO) {
@@ -90,7 +89,6 @@ class MenuActivity : AppCompatActivity() {
         }
     }
 
-    /** Turn the user's GPS position into a city name (best effort). */
     private fun cityName(): String {
         if (!Geocoder.isPresent()) return "Unknown"
         val location = DeviceLocation().lastKnownOrDefault(this)

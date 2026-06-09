@@ -134,7 +134,7 @@ class ListActualChallenge : Fragment() {
         }
     }
 
-    /** Simple list adapter that shows one current challenge per row. */
+    // simple list adapter that shows one current challenge per row
     private inner class CurrentAdapter(context: Context) : BaseAdapter() {
         private val inflater = LayoutInflater.from(context)
         private val challenges = mutableListOf<ChallengeEntity>()
@@ -155,29 +155,27 @@ class ListActualChallenge : Fragment() {
             val row = convertView ?: inflater.inflate(R.layout.item_challenge, parent, false)
             val challenge = getItem(position)
 
-            // Category in its own colour, then the place name.
+            // categorie change
             row.findViewById<TextView>(R.id.challengeCategory).text = challenge.categoryLabel()
             row.findViewById<TextView>(R.id.challengeTitle).text = challenge.title
 
-            // The radio shows and changes which challenge is selected.
             row.findViewById<RadioButton>(R.id.challengeSelectedButton).apply {
                 isChecked = challenge.selected
                 setOnClickListener { onRadioTapped(challenge) }
             }
 
-            // Highlight the selected challenge with a different background.
+            // Highlight selected  background.
             val background = if (challenge.selected) R.color.accent_primary else R.color.accent_secondary
             (row as CardView).setCardBackgroundColor(
                 ContextCompat.getColor(requireContext(), background)
             )
 
-            // Distance from the user to this place.
             val meters = DistanceCalcSimple().meters(
                 userLatitude, userLongitude, challenge.latitude, challenge.longitude
             )
             row.findViewById<TextView>(R.id.challengeDistance).text = formatDistance(meters)
 
-            // Tap the row to open it on the map.
+            // tap top open on map
             row.setOnClickListener { openOnMap(challenge) }
 
             row.findViewById<Button>(R.id.deleteChallengeButton).setOnClickListener {

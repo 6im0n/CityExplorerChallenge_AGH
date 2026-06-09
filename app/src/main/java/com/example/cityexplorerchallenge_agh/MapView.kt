@@ -47,7 +47,6 @@ class MapView : Fragment() {
 
     private val hasTarget: Boolean get() = targetId != NO_TARGET
 
-    /** Re-check distance every time the device reports a new position. */
     private val locationListener = LocationListener { location ->
         checkArrival(location.latitude, location.longitude)
     }
@@ -112,7 +111,6 @@ class MapView : Fragment() {
         }
     }
 
-    /** Pick up the challenge the user selected in the current list, if any. */
     private fun adoptSelectedChallenge() {
         val selected = AppDatabase.get(requireContext()).challengeDao().selectedChallenge() ?: return
         targetId = selected.id
@@ -121,7 +119,6 @@ class MapView : Fragment() {
         targetLongitude = selected.longitude
     }
 
-    /** Center on the target challenge and drop a pin on it. */
     private fun showTarget(map: OsmMapView) {
         val point = GeoPoint(targetLatitude, targetLongitude)
         map.controller.setCenter(point)
@@ -133,7 +130,6 @@ class MapView : Fragment() {
         map.overlays.add(marker)
     }
 
-    /** Listen to the device position to detect when the user reaches the target. */
     private fun startCompletionWatch() {
         val manager = requireContext().getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             ?: return
@@ -150,7 +146,6 @@ class MapView : Fragment() {
         }
     }
 
-    /** Complete the challenge once the user is within the radius. */
     private fun checkArrival(latitude: Double, longitude: Double) {
         if (!hasTarget || alreadyCompleted) return
 
@@ -202,7 +197,6 @@ class MapView : Fragment() {
         private const val NO_TARGET = -1
         private const val COMPLETION_RADIUS_METERS = 30f
 
-        /** Open the map focused on a specific challenge (the "go to" target). */
         fun forChallenge(
             id: Int,
             title: String,

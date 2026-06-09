@@ -21,7 +21,6 @@ abstract class AppDatabase : RoomDatabase() {
                     "city-explorer-challenges.db"
                 )
                     .allowMainThreadQueries()
-                    // School project: if the schema changes, just rebuild the database.
                     .fallbackToDestructiveMigration(true)
                     .build()
             }
