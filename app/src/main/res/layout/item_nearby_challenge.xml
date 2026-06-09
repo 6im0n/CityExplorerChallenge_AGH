@@ -18,28 +18,15 @@
         android:paddingEnd="12dp"
         android:paddingBottom="8dp">
 
-        <RadioButton
-            android:id="@+id/challengeSelectedButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:buttonTint="@color/main"
-            android:clickable="true"
-            android:focusable="false"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:padding="0dp"
-            android:text="" />
-
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/challengeCategory"
+                android:id="@+id/nearbyCategory"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/secondary"
@@ -47,7 +34,7 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/challengeTitle"
+                android:id="@+id/nearbyTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
@@ -57,7 +44,7 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/challengeDistance"
+                android:id="@+id/nearbyDistance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/main"
@@ -65,12 +52,12 @@
         </LinearLayout>
 
         <Button
-            android:id="@+id/deleteChallengeButton"
+            android:id="@+id/nearbyAddButton"
             android:layout_width="92dp"
             android:layout_height="44dp"
             android:backgroundTint="@color/secondary"
             android:focusable="false"
-            android:text="Delete"
+            android:text="Add"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="14sp"

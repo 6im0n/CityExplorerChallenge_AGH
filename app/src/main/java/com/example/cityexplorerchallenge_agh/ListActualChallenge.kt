@@ -10,25 +10,36 @@ import android.widget.Button
 import android.widget.ListView
 import android.widget.RadioButton
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
+import com.example.cityexplorerchallenge_agh.finder.DistanceCalcSimple
+import com.example.cityexplorerchallenge_agh.storage.AppDatabase
+import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * The challenges the user has added and is currently doing (state = "current").
+ *
+ * Tap a challenge to open it on the map (that one becomes the "go to" target).
+ * The side button removes it from the list.
+ */
 class ListActualChallenge : Fragment() {
-    private val allChallenges = mutableListOf(
-        Challenge(1, "Old Town Photo Hunt"),
-        Challenge(2, "River Walk Discovery"),
-        Challenge(3, "Museum Route"),
-        Challenge(4, "Hidden Park Visit"),
-        Challenge(5, "City Landmark Sprint"),
-        Challenge(6, "Street Art Search"),
-        Challenge(7, "Historic Square Tour"),
-        Challenge(8, "Local Cafe Trail"),
-        Challenge(9, "Bridge View Challenge"),
-        Challenge(10, "Evening Lights Walk"),
-        Challenge(11, "Architecture Details"),
-        Challenge(12, "Weekend Explorer Route")
-    )
 
-    private lateinit var adapter: ChallengeAdapter
+    private lateinit var adapter: CurrentAdapter
+    private lateinit var titleText: TextView
+
+    // Where the user is, so each row can show its distance.
+    private var userLatitude = 0.0
+    private var userLongitude = 0.0
+
+    // Id of the challenge currently selected as the "go to" target (null if none).
+    private var selectedChallengeId: Int? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -41,53 +52,111 @@ class ListActualChallenge : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = ChallengeAdapter(requireContext())
+        titleText = view.findViewById(R.id.currentChallengeListTitle)
+
+        adapter = CurrentAdapter(requireContext())
         view.findViewById<ListView>(R.id.currentChallengeList).adapter = adapter
 
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMenu()
         }
-
         view.findViewById<Button>(R.id.mapButton).setOnClickListener {
             (requireActivity() as? MenuActivity)?.showMap()
         }
-
-        refreshChallengeList()
     }
 
-    private fun refreshChallengeList() {
-        adapter.submitList(allChallenges)
+    override fun onResume() {
+        super.onResume()
+        loadCurrentChallenges() // refresh in case one was completed/added elsewhere
     }
 
-    private fun deleteChallenge(challenge: Challenge) {
-        allChallenges.remove(challenge)
-        refreshChallengeList()
+    private fun loadCurrentChallenges() {
+        // Show distances right away with the cached position...
+        val cached = DeviceLocation().lastKnownOrDefault(requireContext())
+        userLatitude = cached.first
+        userLongitude = cached.second
+
+        // ...then refine them once a fresh GPS fix arrives.
+        DeviceLocation().requestFresh(requireContext()) { location ->
+            if (!isAdded) return@requestFresh
+            userLatitude = location.first
+            userLongitude = location.second
+            adapter.notifyDataSetChanged()
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val items = withContext(Dispatchers.IO) {
+                AppDatabase.get(requireContext()).challengeDao()
+                    .byState(ChallengeEntity.STATE_CURRENT)
+            }
+            adapter.submitList(items)
+            selectedChallengeId = items.firstOrNull { it.selected }?.id
+            titleText.text =
+                if (items.isEmpty()) "No current challenges" else "Current challenge list"
+        }
     }
 
-    private data class Challenge(
-        val id: Int,
-        val title: String
-    )
+    // Open the details screen explaining why this challenge was generated.
+    private fun openDetails(challenge: ChallengeEntity) {
+        (requireActivity() as? MenuActivity)?.showCurrentChallengeDetails(challenge)
+    }
 
-    private inner class ChallengeAdapter(context: Context) : BaseAdapter() {
+    //Radio tapped: select this challenge, asking first if another one is selected.
+    private fun onRadioTapped(challenge: ChallengeEntity) {
+        val current = selectedChallengeId
+        if (current != null && current != challenge.id) {
+            askChangeSelection(challenge)
+        } else {
+            applySelection(challenge)
+        }
+    }
+
+    //Confirm before replacing an already selected challenge.
+    private fun askChangeSelection(challenge: ChallengeEntity) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Change selected challenge?")
+            .setMessage("Another challenge is already selected. Select \"${challenge.title}\" instead?")
+            .setPositiveButton("Yes") { _, _ -> applySelection(challenge) }
+            .setNegativeButton("No") { _, _ -> loadCurrentChallenges() }
+            .setOnCancelListener { loadCurrentChallenges() }
+            .show()
+    }
+
+    //Make this challenge the only selected one, then refresh the list.
+    private fun applySelection(challenge: ChallengeEntity) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val dao = AppDatabase.get(requireContext()).challengeDao()
+                dao.clearSelection()
+                dao.select(challenge.id)
+            }
+            loadCurrentChallenges()
+        }
+    }
+
+    private fun deleteChallenge(challenge: ChallengeEntity) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                AppDatabase.get(requireContext()).challengeDao().delete(challenge)
+            }
+            loadCurrentChallenges()
+        }
+    }
+
+    // simple list adapter that shows one current challenge per row
+    private inner class CurrentAdapter(context: Context) : BaseAdapter() {
         private val inflater = LayoutInflater.from(context)
-        private val challenges = mutableListOf<Challenge>()
-        private var selectedChallengeId: Int? = null
+        private val challenges = mutableListOf<ChallengeEntity>()
 
-        fun submitList(newChallenges: List<Challenge>) {
+        fun submitList(newChallenges: List<ChallengeEntity>) {
             challenges.clear()
             challenges.addAll(newChallenges)
-
-            if (selectedChallengeId == null || challenges.none { it.id == selectedChallengeId }) {
-                selectedChallengeId = challenges.firstOrNull()?.id
-            }
-
             notifyDataSetChanged()
         }
 
         override fun getCount(): Int = challenges.size
 
-        override fun getItem(position: Int): Challenge = challenges[position]
+        override fun getItem(position: Int): ChallengeEntity = challenges[position]
 
         override fun getItemId(position: Int): Long = challenges[position].id.toLong()
 
@@ -95,14 +164,28 @@ class ListActualChallenge : Fragment() {
             val row = convertView ?: inflater.inflate(R.layout.item_challenge, parent, false)
             val challenge = getItem(position)
 
+            // categorie change
+            row.findViewById<TextView>(R.id.challengeCategory).text = challenge.categoryLabel()
             row.findViewById<TextView>(R.id.challengeTitle).text = challenge.title
-            row.findViewById<RadioButton>(R.id.challengeSelectedButton).isChecked =
-                challenge.id == selectedChallengeId
 
-            row.setOnClickListener {
-                selectedChallengeId = challenge.id
-                notifyDataSetChanged()
+            row.findViewById<RadioButton>(R.id.challengeSelectedButton).apply {
+                isChecked = challenge.selected
+                setOnClickListener { onRadioTapped(challenge) }
             }
+
+            // Highlight selected  background.
+            val background = if (challenge.selected) R.color.accent_primary else R.color.accent_secondary
+            (row as CardView).setCardBackgroundColor(
+                ContextCompat.getColor(requireContext(), background)
+            )
+
+            val meters = DistanceCalcSimple().meters(
+                userLatitude, userLongitude, challenge.latitude, challenge.longitude
+            )
+            row.findViewById<TextView>(R.id.challengeDistance).text = formatDistance(meters)
+
+            // Tap the row to see why this challenge was generated.
+            row.setOnClickListener { openDetails(challenge) }
 
             row.findViewById<Button>(R.id.deleteChallengeButton).setOnClickListener {
                 deleteChallenge(challenge)
@@ -110,5 +193,10 @@ class ListActualChallenge : Fragment() {
 
             return row
         }
+    }
+
+    private fun formatDistance(meters: Double): String {
+        return if (meters < 1000) "${Math.round(meters)} m"
+        else "%.1f km".format(meters / 1000)
     }
 }

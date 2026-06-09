@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp") version "2.3.8"
 }
+
+// Geoapify API key, read from local.properties (not committed). Empty if absent,
+// in which case the app simply falls back to Overpass.
+val geoapifyApiKey: String = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}.getProperty("GEOAPIFY_API_KEY", "")
 
 android {
     namespace = "com.example.cityexplorerchallenge_agh"
@@ -13,6 +23,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     defaultConfig {
@@ -23,6 +34,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "GEOAPIFY_API_KEY", "\"$geoapifyApiKey\"")
     }
 
     buildTypes {
@@ -44,6 +56,10 @@ android {
 }
 
 dependencies {
+    val room_version = "2.8.4"
+    implementation("androidx.room:room-runtime:${room_version}")
+    implementation("androidx.room:room-ktx:${room_version}")
+    ksp("androidx.room:room-compiler:${room_version}")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.activity.ktx)

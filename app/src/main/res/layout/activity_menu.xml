@@ -47,7 +47,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Current Challenge"
+                        android:text="Current Challenges"
                         android:textColor="@color/main"
                         android:textSize="24sp"
                         android:textStyle="bold" />
@@ -66,9 +66,57 @@
                         android:layout_height="52dp"
                         android:layout_marginTop="20dp"
                         android:backgroundTint="@color/main"
-                        android:text="View challenge"
+                        android:text="View challenges"
                         android:textAllCaps="false"
                         android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/newChallengeCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/accent_primary"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:id="@+id/newChallengeTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="New Challenge"
+                        android:textColor="@color/main"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/newChallengeDescription"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Select new challenges and start a fresh exploration route."
+                        android:textColor="@color/main"
+                        android:textSize="16sp" />
+
+                    <Button
+                        android:id="@+id/selectNewChallengeButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="20dp"
+                        android:backgroundTint="@color/white"
+                        android:text="Select challenges"
+                        android:textAllCaps="false"
+                        android:textColor="@color/main"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -99,22 +147,34 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/statActiveChallenges"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="You current active challenges: N/A"
+                        android:text="Your current active challenges: N/A"
                         android:textColor="@color/accent_secondary"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:id="@+id/statFinishedChallenges"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="You finished challenges: N/A"
+                        android:text="Your finished challenges: N/A"
                         android:textColor="@color/accent_secondary"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:id="@+id/statSelectedChallenge"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Your actual selected challenge: N/A"
+                        android:textColor="@color/accent_secondary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statCity"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
@@ -164,55 +224,6 @@
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
-
-            <androidx.cardview.widget.CardView
-                android:id="@+id/newChallengeCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/accent_primary"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:id="@+id/newChallengeTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="New Challenge"
-                        android:textColor="@color/main"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/newChallengeDescription"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="Select a new challenge and start a fresh exploration route."
-                        android:textColor="@color/main"
-                        android:textSize="16sp" />
-
-                    <Button
-                        android:id="@+id/selectNewChallengeButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:layout_marginTop="20dp"
-                        android:backgroundTint="@color/white"
-                        android:text="Select challenge"
-                        android:textAllCaps="false"
-                        android:textColor="@color/main"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
 
         </LinearLayout>
 
