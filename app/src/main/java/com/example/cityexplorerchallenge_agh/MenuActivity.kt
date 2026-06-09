@@ -118,18 +118,15 @@ class MenuActivity : AppCompatActivity() {
         showFragment(list_completed_chalenge())
     }
 
-    fun showCompletedChallengeInfo(
-        title: String,
-        address: String,
-        latitude: Double,
-        longitude: Double
-    ) {
+    fun showCompletedChallengeInfo(challenge: ChallengeEntity) {
         showFragment(
             completeChalengeInfo.newInstance(
-                title = title,
-                address = address,
-                latitude = latitude,
-                longitude = longitude
+                title = challenge.title,
+                address = challenge.address,
+                latitude = challenge.latitude,
+                longitude = challenge.longitude,
+                startedAt = challenge.startedAt,
+                finishedAt = challenge.finishedAt
             )
         )
     }

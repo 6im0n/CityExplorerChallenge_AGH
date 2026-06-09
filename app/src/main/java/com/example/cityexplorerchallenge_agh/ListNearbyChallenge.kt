@@ -16,6 +16,7 @@ import com.example.cityexplorerchallenge_agh.finder.ChallengeCategory
 import com.example.cityexplorerchallenge_agh.finder.ChallengeFinder
 import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
 import com.example.cityexplorerchallenge_agh.finder.DistanceCalcSimple
+import com.example.cityexplorerchallenge_agh.finder.GeoapifyClient
 import com.example.cityexplorerchallenge_agh.storage.NearbyChallenge
 import com.example.cityexplorerchallenge_agh.finder.OverpassClient
 import com.example.cityexplorerchallenge_agh.storage.AppDatabase
@@ -39,7 +40,6 @@ class ListNearbyChallenge : Fragment() {
     )
 
     private val suggestions = mutableListOf<NearbyChallenge>()
-    private var visibleCount = CHALLENGES_PER_PAGE
 
     // Where the user is, so each row can show its distance.
     private var userLatitude = 0.0
@@ -67,8 +67,8 @@ class ListNearbyChallenge : Fragment() {
 
         loadMoreButton = view.findViewById(R.id.loadMoreChallengesButton)
         loadMoreButton.setOnClickListener {
-            visibleCount = (visibleCount + CHALLENGES_PER_PAGE).coerceAtMost(suggestions.size)
-            refreshChallengeList()
+            // Each click fetches another batch of new places.
+            fetchSuggestions(append = true)
         }
 
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
@@ -88,46 +88,68 @@ class ListNearbyChallenge : Fragment() {
             if (!isAdded) return@requestFresh
             userLatitude = location.first
             userLongitude = location.second
-            searchAround(location)
+            fetchSuggestions(append = false)
         }
     }
 
-    private fun searchAround(location: Pair<Double, Double>) {
-        titleText.text = "Finding nearby challenges…"
+    // Ask Overpass for up to BUDGET new places, skipping ones already shown or added.
+    // append = false rebuilds the list; append = true adds a fresh batch to it.
+    private fun fetchSuggestions(append: Boolean) {
+        titleText.text = if (append) "Finding more challenges…" else "Finding nearby challenges…"
+        loadMoreButton.isEnabled = false
+        val alreadyShown = suggestions.map { it.latitude to it.longitude }.toSet()
 
         viewLifecycleOwner.lifecycleScope.launch {
             val result = try {
                 withContext(Dispatchers.IO) {
-                    val places = OverpassClient().findPlaces(
-                        location.first, location.second, SEARCH_RADIUS_METERS, categories
-                    )
-                    val fresh = removeAlreadyAdded(places)
+                    val places = searchPlaces(userLatitude, userLongitude)
+                    val fresh = removeAlreadyShownOrAdded(places, alreadyShown)
                     ChallengeFinder().suggest(BUDGET, fresh, readHistoryCounts())
                 }
             } catch (e: Exception) {
                 titleText.text = "Nearby challenge list"
                 Toast.makeText(requireContext(), "Could not load challenges. Check your connection.", Toast.LENGTH_LONG).show()
+                loadMoreButton.isEnabled = true
                 return@launch
             }
 
             titleText.text = "Nearby challenge list"
-            if (result.isEmpty()) {
-                Toast.makeText(requireContext(), "No challenges found nearby.", Toast.LENGTH_LONG).show()
-            }
-
-            suggestions.clear()
+            if (!append) suggestions.clear()
             suggestions.addAll(result)
-            visibleCount = CHALLENGES_PER_PAGE
-            refreshChallengeList()
+            adapter.submitList(suggestions.toList())
+
+            if (result.isEmpty()) {
+                val message = if (append) "No more challenges nearby." else "No challenges found nearby."
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+            }
+            // Only offer another fetch if this one actually found something new.
+            loadMoreButton.isEnabled = result.isNotEmpty()
+            loadMoreButton.text = if (result.isNotEmpty()) "Load more" else "No more nearby"
         }
     }
 
-    private fun removeAlreadyAdded(
-        places: Map<ChallengeCategory, List<NearbyChallenge>>
+    // Try Geoapify first (real addresses, reliable). If it has no key, fails, or
+    // finds nothing, fall back to Overpass. Runs on a background thread.
+    private fun searchPlaces(
+        latitude: Double,
+        longitude: Double
     ): Map<ChallengeCategory, List<NearbyChallenge>> {
-        val taken = AppDatabase.get(requireContext()).challengeDao().allChallenges()
+        val viaGeoapify = try {
+            GeoapifyClient().findPlaces(latitude, longitude, SEARCH_RADIUS_METERS, categories)
+        } catch (e: Exception) {
+            null
+        }
+        if (viaGeoapify != null && viaGeoapify.values.any { it.isNotEmpty() }) return viaGeoapify
+        return OverpassClient().findPlaces(latitude, longitude, SEARCH_RADIUS_METERS, categories)
+    }
+
+    private fun removeAlreadyShownOrAdded(
+        places: Map<ChallengeCategory, List<NearbyChallenge>>,
+        alreadyShown: Set<Pair<Double, Double>>
+    ): Map<ChallengeCategory, List<NearbyChallenge>> {
+        val takenFromDb = AppDatabase.get(requireContext()).challengeDao().allChallenges()
             .map { it.latitude to it.longitude }
-            .toSet()
+        val taken = alreadyShown + takenFromDb
         return places.mapValues { (_, list) ->
             list.filter { (it.latitude to it.longitude) !in taken }
         }
@@ -149,22 +171,16 @@ class ListNearbyChallenge : Fragment() {
             address = challenge.address,
             latitude = challenge.latitude,
             longitude = challenge.longitude,
-            state = ChallengeEntity.STATE_CURRENT
+            state = ChallengeEntity.STATE_CURRENT,
+            startedAt = System.currentTimeMillis()
         )
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             AppDatabase.get(requireContext()).challengeDao().add(entity)
         }
 
         suggestions.remove(challenge)
-        visibleCount = visibleCount.coerceAtMost(suggestions.size)
-        refreshChallengeList()
+        adapter.submitList(suggestions.toList())
         Toast.makeText(requireContext(), "Added: ${challenge.title}", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun refreshChallengeList() {
-        adapter.submitList(suggestions.take(visibleCount))
-        loadMoreButton.isEnabled = visibleCount < suggestions.size
-        loadMoreButton.text = if (loadMoreButton.isEnabled) "Load more" else "All loaded"
     }
 
     private inner class NearbyAdapter(context: Context) : BaseAdapter() {
@@ -213,7 +229,8 @@ class ListNearbyChallenge : Fragment() {
 
     companion object {
         private const val BUDGET = 10
-        private const val SEARCH_RADIUS_METERS = 3000
-        private const val CHALLENGES_PER_PAGE = 5
+        // 3 km made the public Overpass servers time out (HTTP 504); 1.5 km
+        // answers in a couple of seconds and still finds plenty of places.
+        private const val SEARCH_RADIUS_METERS = 1500
     }
 }

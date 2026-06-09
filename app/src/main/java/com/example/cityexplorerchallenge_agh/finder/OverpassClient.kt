@@ -2,6 +2,7 @@ package com.example.cityexplorerchallenge_agh.finder
 
 import com.example.cityexplorerchallenge_agh.storage.NearbyChallenge
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -11,7 +12,14 @@ import java.net.URLEncoder
 // within X metres of this GPS point". No API key is needed.
 // Call findPlaces() from a background thread (it does network I/O).
 class OverpassClient {
-    private val endpoint = "https://overpass-api.de/api/interpreter"
+
+    // Several public servers. We try them in order; the public ones are often
+    // busy, so having mirrors makes the search far more reliable.
+    private val endpoints = listOf(
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.openstreetmap.ru/api/interpreter"
+    )
 
     // Find places for every category around a point, grouped by category.
     fun findPlaces(
@@ -21,7 +29,8 @@ class OverpassClient {
         categories: List<ChallengeCategory>
     ): Map<ChallengeCategory, List<NearbyChallenge>> {
         val query = buildQuery(latitude, longitude, radiusMeters, categories)
-        val answer = httpPost(endpoint, "data=" + URLEncoder.encode(query, "UTF-8"))
+        val body = "data=" + URLEncoder.encode(query, "UTF-8")
+        val answer = postToAnyServer(body)
         return parseAnswer(answer, categories)
     }
 
@@ -42,6 +51,19 @@ class OverpassClient {
             );
             out center 60;
         """.trimIndent()
+    }
+
+    // Try each server until one answers; fail only if they all do.
+    private fun postToAnyServer(body: String): String {
+        var lastError: Exception? = null
+        for (endpoint in endpoints) {
+            try {
+                return httpPost(endpoint, body)
+            } catch (e: Exception) {
+                lastError = e // this server was busy/unreachable; try the next one
+            }
+        }
+        throw lastError ?: IOException("No Overpass server answered")
     }
 
     // Read the JSON answer and sort each place into its category.
@@ -91,12 +113,24 @@ class OverpassClient {
     // Minimal HTTP POST that returns the response body as text.
     private fun httpPost(urlString: String, body: String): String {
         val connection = URL(urlString).openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.connectTimeout = 15000
-        connection.readTimeout = 30000
-        connection.doOutput = true
-        connection.outputStream.use { it.write(body.toByteArray()) }
-        connection.inputStream.bufferedReader().use { return it.readText() }
+        try {
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            connection.setRequestProperty("User-Agent", "CityExplorerChallenge/1.0")
+            connection.connectTimeout = 10000
+            connection.readTimeout = 20000
+            connection.doOutput = true
+            connection.outputStream.use { it.write(body.toByteArray()) }
+
+            val code = connection.responseCode
+            if (code !in 200..299) {
+                // Read (and ignore) the error body, then fail so we try the next server.
+                connection.errorStream?.bufferedReader()?.use { it.readText() }
+                throw IOException("Overpass server returned HTTP $code")
+            }
+            return connection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
     }
 }

@@ -3,6 +3,9 @@ package com.example.cityexplorerchallenge_agh.finder
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
+import android.os.CancellationSignal
+import android.os.Handler
+import android.os.Looper
 
 // Reads where the phone is.
 class DeviceLocation {
@@ -10,6 +13,9 @@ class DeviceLocation {
     // Fallback position: Krakow main square. Used when the real one is unknown.
     private val defaultLatitude = 50.0647
     private val defaultLongitude = 19.9450
+
+    // Give up waiting for a fresh fix after this long and use the last known one.
+    private val fixTimeoutMillis = 6000L
 
     // Last known position, or the Krakow fallback if it is not available.
     fun lastKnownOrDefault(context: Context): Pair<Double, Double> =
@@ -30,13 +36,32 @@ class DeviceLocation {
             return
         }
 
+        // Make sure onResult runs exactly once: either the real fix, or a timeout.
+        var delivered = false
+        fun deliverOnce(result: Pair<Double, Double>) {
+            if (!delivered) {
+                delivered = true
+                onResult(result)
+            }
+        }
+
+        val cancel = CancellationSignal()
+        val handler = Handler(Looper.getMainLooper())
+        val timeout = Runnable {
+            cancel.cancel()
+            deliverOnce(lastKnownOrDefault(context))
+        }
+        handler.postDelayed(timeout, fixTimeoutMillis)
+
         try {
-            manager.getCurrentLocation(provider, null, context.mainExecutor) { location ->
-                if (location != null) onResult(location.latitude to location.longitude)
-                else onResult(lastKnownOrDefault(context))
+            manager.getCurrentLocation(provider, cancel, context.mainExecutor) { location ->
+                handler.removeCallbacks(timeout)
+                if (location != null) deliverOnce(location.latitude to location.longitude)
+                else deliverOnce(lastKnownOrDefault(context))
             }
         } catch (e: SecurityException) {
-            onResult(lastKnownOrDefault(context))
+            handler.removeCallbacks(timeout)
+            deliverOnce(lastKnownOrDefault(context))
         }
     }
 

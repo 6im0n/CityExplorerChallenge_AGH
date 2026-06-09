@@ -24,6 +24,10 @@ interface ChallengeDao {
     @Query("UPDATE challenges SET state = :state WHERE id = :id")
     fun setState(id: Int, state: String)
 
+    //Mark a challenge finished and remember the time it was reached
+    @Query("UPDATE challenges SET state = 'finished', finishedAt = :finishedAt WHERE id = :id")
+    fun markFinished(id: Int, finishedAt: Long)
+
     //lect every challenge (only one may be the "go to" target)
     @Query("UPDATE challenges SET selected = 0")
     fun clearSelection()

@@ -86,12 +86,7 @@ class list_completed_chalenge : Fragment() {
 
             row.findViewById<TextView>(R.id.challengeTitle).text = challenge.title
             row.findViewById<Button>(R.id.moreInfoButton).setOnClickListener {
-                (requireActivity() as? MenuActivity)?.showCompletedChallengeInfo(
-                    title = challenge.title,
-                    address = challenge.address,
-                    latitude = challenge.latitude,
-                    longitude = challenge.longitude
-                )
+                (requireActivity() as? MenuActivity)?.showCompletedChallengeInfo(challenge)
             }
 
             return row
