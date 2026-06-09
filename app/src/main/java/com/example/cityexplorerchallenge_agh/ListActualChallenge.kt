@@ -71,9 +71,18 @@ class ListActualChallenge : Fragment() {
     }
 
     private fun loadCurrentChallenges() {
-        val location = DeviceLocation().lastKnownOrDefault(requireContext())
-        userLatitude = location.first
-        userLongitude = location.second
+        // Show distances right away with the cached position...
+        val cached = DeviceLocation().lastKnownOrDefault(requireContext())
+        userLatitude = cached.first
+        userLongitude = cached.second
+
+        // ...then refine them once a fresh GPS fix arrives.
+        DeviceLocation().requestFresh(requireContext()) { location ->
+            if (!isAdded) return@requestFresh
+            userLatitude = location.first
+            userLongitude = location.second
+            adapter.notifyDataSetChanged()
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             val items = withContext(Dispatchers.IO) {
@@ -87,12 +96,12 @@ class ListActualChallenge : Fragment() {
         }
     }
 
-    /** Open the map on this challenge; it becomes the "go to" target. */
+    //Open the map on this challenge; it becomes the "go to" target.
     private fun openOnMap(challenge: ChallengeEntity) {
         (requireActivity() as? MenuActivity)?.showMapForChallenge(challenge)
     }
 
-    /** Radio tapped: select this challenge, asking first if another one is selected. */
+    //Radio tapped: select this challenge, asking first if another one is selected.
     private fun onRadioTapped(challenge: ChallengeEntity) {
         val current = selectedChallengeId
         if (current != null && current != challenge.id) {
@@ -102,7 +111,7 @@ class ListActualChallenge : Fragment() {
         }
     }
 
-    /** Confirm before replacing an already selected challenge. */
+    //Confirm before replacing an already selected challenge.
     private fun askChangeSelection(challenge: ChallengeEntity) {
         AlertDialog.Builder(requireContext())
             .setTitle("Change selected challenge?")
@@ -113,7 +122,7 @@ class ListActualChallenge : Fragment() {
             .show()
     }
 
-    /** Make this challenge the only selected one, then refresh the list. */
+    //Make this challenge the only selected one, then refresh the list.
     private fun applySelection(challenge: ChallengeEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) {

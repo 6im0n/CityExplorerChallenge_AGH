@@ -73,25 +73,30 @@ class MenuActivity : AppCompatActivity() {
     }
 
     private fun refreshStats() {
+        // Counts come from the database, no location needed.
         lifecycleScope.launch {
-            val stats = withContext(Dispatchers.IO) {
+            val counts = withContext(Dispatchers.IO) {
                 val dao = AppDatabase.get(this@MenuActivity).challengeDao()
-                val active = dao.byState(ChallengeEntity.STATE_CURRENT).size
-                val finished = dao.byState(ChallengeEntity.STATE_FINISHED).size
-                Triple(active, finished, cityName())
+                dao.byState(ChallengeEntity.STATE_CURRENT).size to
+                    dao.byState(ChallengeEntity.STATE_FINISHED).size
             }
             findViewById<TextView>(R.id.statActiveChallenges).text =
-                "You current active challenges: ${stats.first}"
+                "You current active challenges: ${counts.first}"
             findViewById<TextView>(R.id.statFinishedChallenges).text =
-                "You finished challenges: ${stats.second}"
-            findViewById<TextView>(R.id.statCity).text =
-                "Your actual city: ${stats.third}"
+                "You finished challenges: ${counts.second}"
+        }
+
+        // not perfect, city needs a fresh GPS fix, then a geocoder lookup off the main thread.
+        DeviceLocation().requestFresh(this) { location ->
+            lifecycleScope.launch {
+                val city = withContext(Dispatchers.IO) { cityName(location) }
+                findViewById<TextView>(R.id.statCity).text = "Your actual city: $city"
+            }
         }
     }
 
-    private fun cityName(): String {
+    private fun cityName(location: Pair<Double, Double>): String {
         if (!Geocoder.isPresent()) return "Unknown"
-        val location = DeviceLocation().lastKnownOrDefault(this)
         return try {
             val geocoder = Geocoder(this, Locale.getDefault())
             val address = geocoder.getFromLocation(location.first, location.second, 1)?.firstOrNull()

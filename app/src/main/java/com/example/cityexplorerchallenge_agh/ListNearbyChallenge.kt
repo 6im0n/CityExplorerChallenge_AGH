@@ -81,11 +81,19 @@ class ListNearbyChallenge : Fragment() {
         loadSuggestions()
     }
 
+    // Ask for a fresh GPS fix, then search around it.
     private fun loadSuggestions() {
+        titleText.text = "Finding your location…"
+        DeviceLocation().requestFresh(requireContext()) { location ->
+            if (!isAdded) return@requestFresh
+            userLatitude = location.first
+            userLongitude = location.second
+            searchAround(location)
+        }
+    }
+
+    private fun searchAround(location: Pair<Double, Double>) {
         titleText.text = "Finding nearby challenges…"
-        val location = DeviceLocation().lastKnownOrDefault(requireContext())
-        userLatitude = location.first
-        userLongitude = location.second
 
         viewLifecycleOwner.lifecycleScope.launch {
             val result = try {

@@ -15,6 +15,31 @@ class DeviceLocation {
     fun lastKnownOrDefault(context: Context): Pair<Double, Double> =
         lastKnown(context) ?: (defaultLatitude to defaultLongitude)
 
+    // Ask the phone for a fresh position, then hand it back to onResult (on the
+    // main thread). Falls back to the last known position if nothing comes.
+    fun requestFresh(context: Context, onResult: (Pair<Double, Double>) -> Unit) {
+        val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val provider = when {
+            manager == null -> null
+            manager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+            manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+            else -> null
+        }
+        if (manager == null || provider == null) {
+            onResult(lastKnownOrDefault(context))
+            return
+        }
+
+        try {
+            manager.getCurrentLocation(provider, null, context.mainExecutor) { location ->
+                if (location != null) onResult(location.latitude to location.longitude)
+                else onResult(lastKnownOrDefault(context))
+            }
+        } catch (e: SecurityException) {
+            onResult(lastKnownOrDefault(context))
+        }
+    }
+
     // Straight-line distance in metres between two GPS points.
     fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val result = FloatArray(1)
