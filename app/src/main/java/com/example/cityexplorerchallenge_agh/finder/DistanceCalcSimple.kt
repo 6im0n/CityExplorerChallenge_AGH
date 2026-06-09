@@ -9,7 +9,6 @@ class DistanceCalcSimple {
 
     private val earthRadiusMeters = 6_371_000.0
 
-    // Distance in metres between (lat1, lon1) and (lat2, lon2).
     fun meters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         // Gap between the points, turned into radians.
         val dLat = Math.toRadians(lat2 - lat1)

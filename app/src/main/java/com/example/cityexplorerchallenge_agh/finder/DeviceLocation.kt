@@ -10,19 +10,14 @@ import android.os.Looper
 // Reads where the phone is.
 class DeviceLocation {
 
-    // Fallback position: Krakow main square. Used when the real one is unknown.
     private val defaultLatitude = 50.0647
     private val defaultLongitude = 19.9450
 
-    // Give up waiting for a fresh fix after this long and use the last known one.
     private val fixTimeoutMillis = 6000L
 
-    // Last known position, or the Krakow fallback if it is not available.
     fun lastKnownOrDefault(context: Context): Pair<Double, Double> =
         lastKnown(context) ?: (defaultLatitude to defaultLongitude)
 
-    // Ask the phone for a fresh position, then hand it back to onResult (on the
-    // main thread). Falls back to the last known position if nothing comes.
     fun requestFresh(context: Context, onResult: (Pair<Double, Double>) -> Unit) {
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
         val provider = when {
@@ -36,7 +31,6 @@ class DeviceLocation {
             return
         }
 
-        // Make sure onResult runs exactly once: either the real fix, or a timeout.
         var delivered = false
         fun deliverOnce(result: Pair<Double, Double>) {
             if (!delivered) {
@@ -65,7 +59,6 @@ class DeviceLocation {
         }
     }
 
-    // Straight-line distance in metres between two GPS points.
     fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val result = FloatArray(1)
         Location.distanceBetween(lat1, lon1, lat2, lon2, result)
