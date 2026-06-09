@@ -161,7 +161,7 @@ class MapView : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 val dao = AppDatabase.get(requireContext()).challengeDao()
-                dao.setState(targetId, ChallengeEntity.STATE_FINISHED)
+                dao.markFinished(targetId, System.currentTimeMillis())
                 dao.clearSelection() // the goal is reached; no challenge stays selected
             }
             Toast.makeText(requireContext(), "Challenge completed: $targetTitle", Toast.LENGTH_LONG).show()

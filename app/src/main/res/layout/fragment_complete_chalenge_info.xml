@@ -53,6 +53,24 @@
             android:textColor="@color/secondary"
             android:textSize="16sp"
             tools:text="Rynek Glowny 1, Krakow" />
+
+        <TextView
+            android:id="@+id/challengeStarted"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/secondary"
+            android:textSize="16sp"
+            tools:text="Started: 1 Jun 2026, 10:30" />
+
+        <TextView
+            android:id="@+id/challengeFinished"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/secondary"
+            android:textSize="16sp"
+            tools:text="Finished: 1 Jun 2026, 11:15" />
     </LinearLayout>
 
     <org.osmdroid.views.MapView

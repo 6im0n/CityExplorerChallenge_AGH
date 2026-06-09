@@ -20,7 +20,9 @@ data class ChallengeEntity(
     val latitude: Double,
     val longitude: Double,
     val state: String,
-    val selected: Boolean = false
+    val selected: Boolean = false,
+    val startedAt: Long = 0,
+    val finishedAt: Long = 0
 ) {
     fun categoryLabel(): String =
         runCatching { ChallengeCategory.valueOf(category).label }.getOrDefault(category)
