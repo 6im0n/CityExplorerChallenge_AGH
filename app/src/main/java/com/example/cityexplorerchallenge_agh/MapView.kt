@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
+import com.example.cityexplorerchallenge_agh.finder.GeoapifyRoutingClient
 import com.example.cityexplorerchallenge_agh.storage.AppDatabase
 import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.MapView as OsmMapView
 
 /**
@@ -45,6 +47,10 @@ class MapView : Fragment() {
 
     // Blue dot for the user's live position.
     private var userMarker: Marker? = null
+
+    // Walking route line to the challenge; routingBusy = a request is in flight.
+    private var routeLine: Polyline? = null
+    private var routingBusy = false
 
     // Target challenge (only set when opened from a current challenge).
     private var targetId = NO_TARGET
@@ -153,8 +159,8 @@ class MapView : Fragment() {
         // Register on both providers. This is safe even if a provider is off now:
         // updates simply start arriving once it is turned back on (keep trying).
         try {
-            manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 5f, locationListener)
-            manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 5f, locationListener)
+            manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 2f, locationListener)
+            manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, locationListener)
         } catch (e: SecurityException) {
             notifyNoLocation() // location permission was revoked
             return
@@ -179,8 +185,42 @@ class MapView : Fragment() {
         showUserLocation(latitude, longitude)
         if (hasTarget) {
             frameUserAndTarget(latitude, longitude)
+            updateRoute(latitude, longitude)
             checkArrival(latitude, longitude)
         }
+    }
+
+    // Fetch the walking route from the user to the challenge and draw it.
+    private fun updateRoute(userLatitude: Double, userLongitude: Double) {
+        if (routingBusy) return // one request at a time
+        routingBusy = true
+        viewLifecycleOwner.lifecycleScope.launch {
+            val points = try {
+                withContext(Dispatchers.IO) {
+                    GeoapifyRoutingClient().walkingRoute(
+                        userLatitude, userLongitude, targetLatitude, targetLongitude
+                    )
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+            if (points.isNotEmpty()) drawRoute(points)
+            routingBusy = false
+        }
+    }
+
+    // Draw (or replace) the route line under the markers.
+    private fun drawRoute(points: List<Pair<Double, Double>>) {
+        val map = osmMapView ?: return
+        map.overlays.remove(routeLine)
+
+        val line = Polyline(map)
+        line.setPoints(points.map { GeoPoint(it.first, it.second) })
+        line.outlinePaint.color = Color.parseColor("#1E88E5")
+        line.outlinePaint.strokeWidth = 12f
+        map.overlays.add(0, line) // index 0 = below the pins and the blue dot
+        routeLine = line
+        map.invalidate()
     }
 
     // Draw (or move) the blue dot at the user's position.
