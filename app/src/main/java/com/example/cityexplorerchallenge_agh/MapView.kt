@@ -1,6 +1,9 @@
 package com.example.cityexplorerchallenge_agh
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
@@ -20,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.MapView as OsmMapView
@@ -39,6 +43,9 @@ class MapView : Fragment() {
     private var locationManager: LocationManager? = null
     private var alreadyCompleted = false
 
+    // Blue dot for the user's live position.
+    private var userMarker: Marker? = null
+
     // Target challenge (only set when opened from a current challenge).
     private var targetId = NO_TARGET
     private var targetTitle: String? = null
@@ -48,7 +55,7 @@ class MapView : Fragment() {
     private val hasTarget: Boolean get() = targetId != NO_TARGET
 
     private val locationListener = LocationListener { location ->
-        checkArrival(location.latitude, location.longitude)
+        onUserLocation(location.latitude, location.longitude)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,11 +101,13 @@ class MapView : Fragment() {
 
         if (hasTarget) {
             showTarget(map)
-            startCompletionWatch()
         } else {
             val center = DeviceLocation().lastKnownOrDefault(requireContext())
             map.controller.setCenter(GeoPoint(center.first, center.second))
         }
+
+        // Show (and follow) the user's blue dot in both modes.
+        startLocationWatch()
 
         view.findViewById<TextView>(R.id.currentChallenge).text =
             if (hasTarget) "Current challenge: $targetTitle" else "Current challenge: none"
@@ -130,20 +139,101 @@ class MapView : Fragment() {
         map.overlays.add(marker)
     }
 
-    private fun startCompletionWatch() {
+    private fun startLocationWatch() {
         val manager = requireContext().getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            ?: return
+        if (manager == null) {
+            notifyNoLocation()
+            return
+        }
         locationManager = manager
 
-        // Maybe the user is already there.
-        DeviceLocation().lastKnown(requireContext())?.let { checkArrival(it.first, it.second) }
+        // Show the dot right away from the last known position, if we have one.
+        DeviceLocation().lastKnown(requireContext())?.let { onUserLocation(it.first, it.second) }
 
+        // Register on both providers. This is safe even if a provider is off now:
+        // updates simply start arriving once it is turned back on (keep trying).
         try {
             manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 5f, locationListener)
             manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 5f, locationListener)
         } catch (e: SecurityException) {
-            // location permission was revoked; nothing we can do here
+            notifyNoLocation() // location permission was revoked
+            return
         }
+
+        // Nothing is on right now: warn the user, but keep the listeners ready.
+        val gpsOn = manager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        val networkOn = manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        if (!gpsOn && !networkOn) notifyNoLocation()
+    }
+
+    private fun notifyNoLocation() {
+        Toast.makeText(
+            requireContext(),
+            "Location unavailable — turn on GPS to track arrival.",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    // A new position: move the blue dot, fit both points, maybe complete.
+    private fun onUserLocation(latitude: Double, longitude: Double) {
+        showUserLocation(latitude, longitude)
+        if (hasTarget) {
+            frameUserAndTarget(latitude, longitude)
+            checkArrival(latitude, longitude)
+        }
+    }
+
+    // Draw (or move) the blue dot at the user's position.
+    private fun showUserLocation(latitude: Double, longitude: Double) {
+        val map = osmMapView ?: return
+        val marker = userMarker ?: Marker(map).also {
+            it.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            it.icon = blueDot()
+            it.title = "You"
+            it.setInfoWindow(null)
+            map.overlays.add(it)
+            userMarker = it
+        }
+        marker.position = GeoPoint(latitude, longitude)
+        map.invalidate()
+    }
+
+    // A small blue circle with a white border, built in code (no drawable file).
+    private fun blueDot(): Drawable {
+        val density = resources.displayMetrics.density
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor("#1E88E5"))
+            setStroke((2 * density).toInt(), Color.WHITE)
+            setSize((16 * density).toInt(), (16 * density).toInt())
+        }
+    }
+
+    // Keep the map fitted so the user and the challenge both stay visible.
+    // Runs on every new position, so the crop resizes as the user moves.
+    private fun frameUserAndTarget(userLatitude: Double, userLongitude: Double) {
+        val map = osmMapView ?: return
+
+        if (map.width == 0 || map.height == 0) {
+            map.post { frameUserAndTarget(userLatitude, userLongitude) }
+            return
+        }
+
+        val sameSpot = Math.abs(userLatitude - targetLatitude) < 1e-5 &&
+            Math.abs(userLongitude - targetLongitude) < 1e-5
+        if (sameSpot) {
+            map.controller.setCenter(GeoPoint(targetLatitude, targetLongitude))
+            return
+        }
+
+        val box = BoundingBox.fromGeoPoints(
+            listOf(
+                GeoPoint(userLatitude, userLongitude),
+                GeoPoint(targetLatitude, targetLongitude)
+            )
+        )
+        val padding = (48 * resources.displayMetrics.density).toInt()
+        map.zoomToBoundingBox(box, false, padding)
     }
 
     private fun checkArrival(latitude: Double, longitude: Double) {
@@ -157,7 +247,7 @@ class MapView : Fragment() {
     }
 
     private fun completeChallenge() {
-        stopCompletionWatch()
+        stopLocationWatch()
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 val dao = AppDatabase.get(requireContext()).challengeDao()
@@ -169,7 +259,7 @@ class MapView : Fragment() {
         }
     }
 
-    private fun stopCompletionWatch() {
+    private fun stopLocationWatch() {
         locationManager?.removeUpdates(locationListener)
     }
 
@@ -184,7 +274,7 @@ class MapView : Fragment() {
     }
 
     override fun onDestroyView() {
-        stopCompletionWatch()
+        stopLocationWatch()
         super.onDestroyView()
     }
 
