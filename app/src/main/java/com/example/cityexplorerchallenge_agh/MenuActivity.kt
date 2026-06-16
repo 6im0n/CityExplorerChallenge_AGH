@@ -1,0 +1,179 @@
+package com.example.cityexplorerchallenge_agh
+
+import android.location.Geocoder
+import android.os.Bundle
+import android.view.View
+import android.widget.Button
+import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
+import com.example.cityexplorerchallenge_agh.storage.AppDatabase
+import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
+import com.example.cityexplorerchallenge_agh.storage.NearbyChallenge
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
+
+class MenuActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContentView(R.layout.activity_menu)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
+        findViewById<Button>(R.id.viewCurrentChallengeButton).setOnClickListener {
+            showCurrentChallenges()
+        }
+        findViewById<Button>(R.id.viewMap).setOnClickListener {
+            showMap()
+        }
+        findViewById<Button>(R.id.viewHistory).setOnClickListener {
+            showCompletedChallenges()
+        }
+        findViewById<Button>(R.id.selectNewChallengeButton).setOnClickListener {
+            showNearbyChallenges()
+        }
+
+        refreshStats()
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (findViewById<View>(R.id.menuFragmentContainer).visibility == View.VISIBLE) {
+                        showMenu()
+                    } else {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            }
+        )
+    }
+
+    fun showMenu() {
+        supportFragmentManager.findFragmentById(R.id.menuFragmentContainer)?.let { fragment ->
+            supportFragmentManager.beginTransaction()
+                .remove(fragment)
+                .commit()
+        }
+        findViewById<View>(R.id.menuFragmentContainer).visibility = View.GONE
+        findViewById<View>(R.id.mainMenu).visibility = View.VISIBLE
+        refreshStats() // numbers may have changed while a fragment was open
+    }
+
+    private fun refreshStats() {
+        // Counts and the selected challenge come from the database.
+        lifecycleScope.launch {
+            val stats = withContext(Dispatchers.IO) {
+                val dao = AppDatabase.get(this@MenuActivity).challengeDao()
+                val active = dao.byState(ChallengeEntity.STATE_CURRENT).size
+                val finished = dao.byState(ChallengeEntity.STATE_FINISHED).size
+                val selected = dao.selectedChallenge()?.title ?: "None"
+                Triple(active, finished, selected)
+            }
+            findViewById<TextView>(R.id.statActiveChallenges).text =
+                "Your current active challenges: ${stats.first}"
+            findViewById<TextView>(R.id.statFinishedChallenges).text =
+                "Your finished challenges: ${stats.second}"
+            findViewById<TextView>(R.id.statSelectedChallenge).text =
+                "Your actual selected challenge: ${stats.third}"
+        }
+
+        // not perfect, city needs a fresh GPS fix, then a geocoder lookup off the main thread.
+        DeviceLocation().requestFresh(this) { location ->
+            lifecycleScope.launch {
+                val city = withContext(Dispatchers.IO) { cityName(location) }
+                findViewById<TextView>(R.id.statCity).text = "Your actual city: $city"
+            }
+        }
+    }
+
+    private fun cityName(location: Pair<Double, Double>): String {
+        if (!Geocoder.isPresent()) return "Unknown"
+        return try {
+            val geocoder = Geocoder(this, Locale.getDefault())
+            val address = geocoder.getFromLocation(location.first, location.second, 1)?.firstOrNull()
+            address?.locality ?: address?.subAdminArea ?: address?.adminArea ?: "Unknown"
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
+
+    fun showCurrentChallenges() {
+        showFragment(ListActualChallenge())
+    }
+
+    fun showNearbyChallenges() {
+        showFragment(ListNearbyChallenge())
+    }
+
+    fun showCompletedChallenges() {
+        showFragment(list_completed_chalenge())
+    }
+
+    fun showCompletedChallengeInfo(challenge: ChallengeEntity) {
+        showFragment(
+            completeChalengeInfo.newInstance(
+                id = challenge.id,
+                title = challenge.title,
+                address = challenge.address,
+                latitude = challenge.latitude,
+                longitude = challenge.longitude,
+                startedAt = challenge.startedAt,
+                finishedAt = challenge.finishedAt,
+                imagePath = challenge.imagePath
+            )
+        )
+    }
+
+    fun showMap() {
+        showFragment(MapView())
+    }
+
+    fun showPlainMap() {
+        showFragment(MapView.plain())
+    }
+
+    fun showPlacePreview(challenge: NearbyChallenge) {
+        showFragment(MapView.forPreview(challenge.title, challenge.latitude, challenge.longitude))
+    }
+
+    fun showNewChallengeDetails(challenge: NearbyChallenge) {
+        showFragment(ChallengeDetails.forNew(challenge))
+    }
+
+    fun showCurrentChallengeDetails(challenge: ChallengeEntity) {
+        showFragment(ChallengeDetails.forCurrent(challenge))
+    }
+
+    fun showMapForChallenge(challenge: ChallengeEntity) {
+        showFragment(
+            MapView.forChallenge(
+                id = challenge.id,
+                title = challenge.title,
+                latitude = challenge.latitude,
+                longitude = challenge.longitude
+            )
+        )
+    }
+
+    private fun showFragment(fragment: Fragment) {
+        findViewById<View>(R.id.mainMenu).visibility = View.GONE
+        findViewById<View>(R.id.menuFragmentContainer).visibility = View.VISIBLE
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.menuFragmentContainer, fragment)
+            .commit()
+    }
+}

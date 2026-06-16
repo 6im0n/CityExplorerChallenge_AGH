@@ -1,0 +1,367 @@
+package com.example.cityexplorerchallenge_agh
+
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
+import com.example.cityexplorerchallenge_agh.finder.GeoapifyRoutingClient
+import com.example.cityexplorerchallenge_agh.storage.AppDatabase
+import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.MapView as OsmMapView
+
+/**
+ * Shows the map.
+ *
+ * Two modes:
+ *  - no target  -> just a general map centred on the user.
+ *  - a target   -> opened from a current challenge. We mark its position and
+ *                  watch the user's location; within 30 m the challenge is
+ *                  marked "finished" and moves to the completed list.
+ */
+class MapView : Fragment() {
+
+    private var osmMapView: OsmMapView? = null
+    private var locationManager: LocationManager? = null
+    private var alreadyCompleted = false
+    private var userMarker: Marker? = null
+
+    private var routeLine: Polyline? = null
+    private var routingBusy = false
+
+    private var targetId = NO_TARGET
+    private var targetTitle: String? = null
+    private var targetLatitude = 0.0
+    private var targetLongitude = 0.0
+
+    private var previewMode = false
+    private var plainMode = false
+
+    private val hasTarget: Boolean get() = targetId != NO_TARGET
+
+    private val locationListener = LocationListener { location ->
+        onUserLocation(location.latitude, location.longitude)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        arguments?.let {
+            targetId = it.getInt(ARG_ID, NO_TARGET)
+            targetTitle = it.getString(ARG_TITLE)
+            targetLatitude = it.getDouble(ARG_LATITUDE)
+            targetLongitude = it.getDouble(ARG_LONGITUDE)
+            previewMode = it.getString(ARG_MODE) == MODE_PREVIEW
+            plainMode = it.getString(ARG_MODE) == MODE_PLAIN
+        }
+
+        val context = requireContext().applicationContext
+        Configuration.getInstance().load(
+            context,
+            context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
+        )
+        Configuration.getInstance().userAgentValue = context.packageName
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.fragment_map_view, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val map = view.findViewById<OsmMapView>(R.id.osmMapView).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            controller.setZoom(15.0)
+        }
+        osmMapView = map
+
+        // Auto-load the selected challenge only for the normal map (not preview/plain).
+        if (!hasTarget && !previewMode && !plainMode) {
+            adoptSelectedChallenge()
+        }
+
+        when {
+            hasTarget || previewMode -> showTarget(map)
+            else -> {
+                val center = DeviceLocation().lastKnownOrDefault(requireContext())
+                map.controller.setCenter(GeoPoint(center.first, center.second))
+            }
+        }
+
+        startLocationWatch()
+
+        view.findViewById<TextView>(R.id.currentChallenge).text = when {
+            hasTarget -> "Current challenge: $targetTitle"
+            previewMode -> "Preview: $targetTitle"
+            else -> "Current challenge: none"
+        }
+
+        view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener {
+            (requireActivity() as? MenuActivity)?.showMenu()
+        }
+        view.findViewById<Button>(R.id.currentChallengeListButton).setOnClickListener {
+            (requireActivity() as? MenuActivity)?.showCurrentChallenges()
+        }
+    }
+
+    private fun adoptSelectedChallenge() {
+        val selected = AppDatabase.get(requireContext()).challengeDao().selectedChallenge() ?: return
+        targetId = selected.id
+        targetTitle = selected.title
+        targetLatitude = selected.latitude
+        targetLongitude = selected.longitude
+    }
+
+    private fun showTarget(map: OsmMapView) {
+        val point = GeoPoint(targetLatitude, targetLongitude)
+        map.controller.setCenter(point)
+
+        val marker = Marker(map)
+        marker.position = point
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        marker.title = targetTitle
+        map.overlays.add(marker)
+    }
+
+    private fun startLocationWatch() {
+        val manager = requireContext().getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        if (manager == null) {
+            notifyNoLocation()
+            return
+        }
+        locationManager = manager
+
+        // Show the dot right away from the last known position, if we have one.
+        DeviceLocation().lastKnown(requireContext())?.let { onUserLocation(it.first, it.second) }
+
+        try {
+            manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 2f, locationListener)
+            manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, locationListener)
+        } catch (e: SecurityException) {
+            notifyNoLocation() // location permission was revoked
+            return
+        }
+
+        val gpsOn = manager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        val networkOn = manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        if (!gpsOn && !networkOn) notifyNoLocation()
+    }
+
+    private fun notifyNoLocation() {
+        Toast.makeText(
+            requireContext(),
+            "Location unavailable — turn on GPS to track arrival.",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    private fun onUserLocation(latitude: Double, longitude: Double) {
+        showUserLocation(latitude, longitude)
+        if (hasTarget) {
+            frameUserAndTarget(latitude, longitude)
+            updateRoute(latitude, longitude)
+            checkArrival(latitude, longitude)
+        }
+    }
+
+    // Fetch the walking route from the user to the challenge and draw it.
+    private fun updateRoute(userLatitude: Double, userLongitude: Double) {
+        if (routingBusy) return // one request at a time
+        routingBusy = true
+        viewLifecycleOwner.lifecycleScope.launch {
+            val points = try {
+                withContext(Dispatchers.IO) {
+                    GeoapifyRoutingClient().walkingRoute(
+                        userLatitude, userLongitude, targetLatitude, targetLongitude
+                    )
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+            if (points.isNotEmpty()) drawRoute(points)
+            routingBusy = false
+        }
+    }
+
+    private fun drawRoute(points: List<Pair<Double, Double>>) {
+        val map = osmMapView ?: return
+        map.overlays.remove(routeLine)
+
+        val line = Polyline(map)
+        line.setPoints(points.map { GeoPoint(it.first, it.second) })
+        line.outlinePaint.color = Color.parseColor("#1E88E5")
+        line.outlinePaint.strokeWidth = 12f
+        map.overlays.add(0, line) // index 0 = below the pins and the blue dot
+        routeLine = line
+        map.invalidate()
+    }
+
+    private fun showUserLocation(latitude: Double, longitude: Double) {
+        val map = osmMapView ?: return
+        val marker = userMarker ?: Marker(map).also {
+            it.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            it.icon = blueDot()
+            it.title = "You"
+            it.setInfoWindow(null)
+            map.overlays.add(it)
+            userMarker = it
+        }
+        marker.position = GeoPoint(latitude, longitude)
+        map.invalidate()
+    }
+
+    private fun blueDot(): Drawable {
+        val density = resources.displayMetrics.density
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor("#1E88E5"))
+            setStroke((2 * density).toInt(), Color.WHITE)
+            setSize((16 * density).toInt(), (16 * density).toInt())
+        }
+    }
+
+    private fun frameUserAndTarget(userLatitude: Double, userLongitude: Double) {
+        val map = osmMapView ?: return
+
+        if (map.width == 0 || map.height == 0) {
+            map.post { frameUserAndTarget(userLatitude, userLongitude) }
+            return
+        }
+
+        val sameSpot = Math.abs(userLatitude - targetLatitude) < 1e-5 &&
+            Math.abs(userLongitude - targetLongitude) < 1e-5
+        if (sameSpot) {
+            map.controller.setCenter(GeoPoint(targetLatitude, targetLongitude))
+            return
+        }
+
+        val box = BoundingBox.fromGeoPoints(
+            listOf(
+                GeoPoint(userLatitude, userLongitude),
+                GeoPoint(targetLatitude, targetLongitude)
+            )
+        )
+        val padding = (48 * resources.displayMetrics.density).toInt()
+        map.zoomToBoundingBox(box, false, padding)
+    }
+
+    private fun checkArrival(latitude: Double, longitude: Double) {
+        if (!hasTarget || alreadyCompleted) return
+
+        val distance = DeviceLocation().distanceMeters(latitude, longitude, targetLatitude, targetLongitude)
+        if (distance <= COMPLETION_RADIUS_METERS) {
+            alreadyCompleted = true
+            completeChallenge()
+        }
+    }
+
+    private fun completeChallenge() {
+        stopLocationWatch()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val finished = withContext(Dispatchers.IO) {
+                val dao = AppDatabase.get(requireContext()).challengeDao()
+                dao.markFinished(targetId, System.currentTimeMillis())
+                dao.clearSelection() // the goal is reached; no challenge stays selected
+                dao.byId(targetId)
+            }
+            Toast.makeText(requireContext(), "Challenge completed: $targetTitle", Toast.LENGTH_LONG).show()
+
+            val menu = requireActivity() as? MenuActivity
+
+            if (finished != null) menu?.showCompletedChallengeInfo(finished)
+            else menu?.showCompletedChallenges()
+        }
+    }
+
+    private fun stopLocationWatch() {
+        locationManager?.removeUpdates(locationListener)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        osmMapView?.onResume()
+    }
+
+    override fun onPause() {
+        osmMapView?.onPause()
+        super.onPause()
+    }
+
+    override fun onDestroyView() {
+        stopLocationWatch()
+        super.onDestroyView()
+    }
+
+    companion object {
+        private const val ARG_ID = "id"
+        private const val ARG_TITLE = "title"
+        private const val ARG_LATITUDE = "latitude"
+        private const val ARG_LONGITUDE = "longitude"
+        private const val ARG_MODE = "mode"
+
+        private const val MODE_PREVIEW = "preview"
+        private const val MODE_PLAIN = "plain"
+
+        private const val NO_TARGET = -1
+        private const val COMPLETION_RADIUS_METERS = 30f
+
+        fun forChallenge(
+            id: Int,
+            title: String,
+            latitude: Double,
+            longitude: Double
+        ): MapView {
+            return MapView().apply {
+                arguments = Bundle().apply {
+                    putInt(ARG_ID, id)
+                    putString(ARG_TITLE, title)
+                    putDouble(ARG_LATITUDE, latitude)
+                    putDouble(ARG_LONGITUDE, longitude)
+                }
+            }
+        }
+
+        fun forPreview(title: String, latitude: Double, longitude: Double): MapView {
+            return MapView().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_MODE, MODE_PREVIEW)
+                    putString(ARG_TITLE, title)
+                    putDouble(ARG_LATITUDE, latitude)
+                    putDouble(ARG_LONGITUDE, longitude)
+                }
+            }
+        }
+
+        fun plain(): MapView {
+            return MapView().apply {
+                arguments = Bundle().apply { putString(ARG_MODE, MODE_PLAIN) }
+            }
+        }
+    }
+}
