@@ -7,7 +7,7 @@ plugins {
 }
 
 // Geoapify API key, read from local.properties (not committed). Empty if absent,
-// in which case the app simply falls back to Overpass.
+// in which case place search will not work.
 val geoapifyApiKey: String = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }

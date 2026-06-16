@@ -10,7 +10,7 @@ import java.net.URLEncoder
 
 // Talks to the Geoapify Places API (https://www.geoapify.com/places-api/).
 // Needs an API key in local.properties (GEOAPIFY_API_KEY). Returns real names
-// and addresses, so we use it first and keep Overpass as a backup.
+// and addresses.
 // Call findPlaces() from a background thread (it does network I/O).
 class GeoapifyClient {
     private val endpoint = "https://api.geoapify.com/v2/places"

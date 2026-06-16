@@ -22,9 +22,9 @@ This is a university project for the AGH MBA Android course.
 
 ## How places are found
 
-- Places come from **Geoapify Places** (primary), with **OpenStreetMap
-  Overpass** as a fallback. The app fetches them live around you and stores none
-  in advance.
+- Places come from the **Geoapify Places** API. The app fetches them live
+  around you and stores none in advance. A **Geoapify API key** is required (see
+  [Setup](#setup)).
 - Walking routes come from the **Geoapify Routing API**.
 - The app stores everything you add locally with **Room** (one table; a
   challenge changes state from `current` to `finished`).
@@ -68,7 +68,7 @@ appear.
 - [osmdroid](https://github.com/osmdroid/osmdroid) for the OpenStreetMap map
 - Room for local storage, Kotlin coroutines for background work
 - `LocationManager` for GPS, `Geocoder` for city names
-- Geoapify (Places + Routing), Overpass (fallback)
+- Geoapify (Places + Routing)
 
 ## Setup
 
@@ -80,5 +80,5 @@ appear.
    ```
 
 3. Open in Android Studio and run on a device or emulator with location
-   enabled. Without a key the app still works using the Overpass fallback, but
-   with no addresses or routes.
+   enabled. A key is required; without one, place search and routes will not
+   work.

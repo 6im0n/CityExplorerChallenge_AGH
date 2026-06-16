@@ -19,7 +19,6 @@ import com.example.cityexplorerchallenge_agh.finder.DeviceLocation
 import com.example.cityexplorerchallenge_agh.finder.DistanceCalcSimple
 import com.example.cityexplorerchallenge_agh.finder.GeoapifyClient
 import com.example.cityexplorerchallenge_agh.storage.NearbyChallenge
-import com.example.cityexplorerchallenge_agh.finder.OverpassClient
 import com.example.cityexplorerchallenge_agh.storage.AppDatabase
 import com.example.cityexplorerchallenge_agh.storage.ChallengeEntity
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +30,7 @@ import java.util.Locale
 /**
  * "Find new challenge" screen.
  *
- * Flow: read GPS -> ask Overpass for places -> adapt the mix to the user's
+ * Flow: read GPS -> ask Geoapify for places -> adapt the mix to the user's
  * history -> show the list. Tapping "Add" saves the challenge as "current".
  */
 class ListNearbyChallenge : Fragment() {
@@ -95,7 +94,7 @@ class ListNearbyChallenge : Fragment() {
         }
     }
 
-    // Ask Overpass for up to BUDGET new places, skipping ones already shown or added.
+    // Ask Geoapify for up to BUDGET new places, skipping ones already shown or added.
     // append = false rebuilds the list; append = true adds a fresh batch to it.
     private fun fetchSuggestions(append: Boolean) {
         titleText.text = if (append) "Finding more challenges…" else "Finding nearby challenges…"
@@ -138,19 +137,12 @@ class ListNearbyChallenge : Fragment() {
         }
     }
 
-    // Try Geoapify first (real addresses, reliable). If it has no key, fails, or
-    // finds nothing, fall back to Overpass. Runs on a background thread.
+    // Ask Geoapify for places (real names and addresses). Runs on a background thread.
     private fun searchPlaces(
         latitude: Double,
         longitude: Double
     ): Map<ChallengeCategory, List<NearbyChallenge>> {
-        val viaGeoapify = try {
-            GeoapifyClient().findPlaces(latitude, longitude, SEARCH_RADIUS_METERS, categories)
-        } catch (e: Exception) {
-            null
-        }
-        if (viaGeoapify != null && viaGeoapify.values.any { it.isNotEmpty() }) return viaGeoapify
-        return OverpassClient().findPlaces(latitude, longitude, SEARCH_RADIUS_METERS, categories)
+        return GeoapifyClient().findPlaces(latitude, longitude, SEARCH_RADIUS_METERS, categories)
     }
 
     private fun removeAlreadyShownOrAdded(
@@ -282,8 +274,7 @@ class ListNearbyChallenge : Fragment() {
 
     companion object {
         private const val BUDGET = 10
-        // 3 km made the public Overpass servers time out (HTTP 504); 1.5 km
-        // answers in a couple of seconds and still finds plenty of places.
+        // 1.5 km keeps results local and still finds plenty of places.
         private const val SEARCH_RADIUS_METERS = 1500
     }
 }
