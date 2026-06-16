@@ -17,18 +17,20 @@ data class ChallengeEntity(
     val title: String,
     val category: String,
     val address: String,
+
     val latitude: Double,
     val longitude: Double,
     val state: String,
     val selected: Boolean = false,
+
     val startedAt: Long = 0,
     val finishedAt: Long = 0,
-    // Path to a photo the user attached, in app storage (null = none yet).
+
     val imagePath: String? = null,
-    // Where the user was when the challenge was added (for the distance travelled).
+
     val startLatitude: Double = 0.0,
     val startLongitude: Double = 0.0,
-    // City the place is in (best effort, for the "most visited city" stat).
+
     val city: String? = null
 ) {
     fun categoryLabel(): String =

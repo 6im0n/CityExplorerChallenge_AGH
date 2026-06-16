@@ -44,21 +44,16 @@ class MapView : Fragment() {
     private var osmMapView: OsmMapView? = null
     private var locationManager: LocationManager? = null
     private var alreadyCompleted = false
-
-    // Blue dot for the user's live position.
     private var userMarker: Marker? = null
 
-    // Walking route line to the challenge; routingBusy = a request is in flight.
     private var routeLine: Polyline? = null
     private var routingBusy = false
 
-    // Target challenge (only set when opened from a current challenge).
     private var targetId = NO_TARGET
     private var targetTitle: String? = null
     private var targetLatitude = 0.0
     private var targetLongitude = 0.0
 
-    // preview = read-only pin (a nearby place); plain = general map, no auto challenge.
     private var previewMode = false
     private var plainMode = false
 
@@ -112,7 +107,6 @@ class MapView : Fragment() {
         }
 
         when {
-            // Go-to a challenge, or just preview a place: both drop a pin and centre.
             hasTarget || previewMode -> showTarget(map)
             else -> {
                 val center = DeviceLocation().lastKnownOrDefault(requireContext())
@@ -120,7 +114,6 @@ class MapView : Fragment() {
             }
         }
 
-        // Show (and follow) the user's blue dot in every mode.
         startLocationWatch()
 
         view.findViewById<TextView>(R.id.currentChallenge).text = when {
@@ -167,8 +160,6 @@ class MapView : Fragment() {
         // Show the dot right away from the last known position, if we have one.
         DeviceLocation().lastKnown(requireContext())?.let { onUserLocation(it.first, it.second) }
 
-        // Register on both providers. This is safe even if a provider is off now:
-        // updates simply start arriving once it is turned back on (keep trying).
         try {
             manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 2f, locationListener)
             manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, locationListener)
@@ -177,7 +168,6 @@ class MapView : Fragment() {
             return
         }
 
-        // Nothing is on right now: warn the user, but keep the listeners ready.
         val gpsOn = manager.isProviderEnabled(LocationManager.GPS_PROVIDER)
         val networkOn = manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
         if (!gpsOn && !networkOn) notifyNoLocation()
@@ -191,7 +181,6 @@ class MapView : Fragment() {
         ).show()
     }
 
-    // A new position: move the blue dot, fit both points, maybe complete.
     private fun onUserLocation(latitude: Double, longitude: Double) {
         showUserLocation(latitude, longitude)
         if (hasTarget) {
@@ -220,7 +209,6 @@ class MapView : Fragment() {
         }
     }
 
-    // Draw (or replace) the route line under the markers.
     private fun drawRoute(points: List<Pair<Double, Double>>) {
         val map = osmMapView ?: return
         map.overlays.remove(routeLine)
@@ -234,7 +222,6 @@ class MapView : Fragment() {
         map.invalidate()
     }
 
-    // Draw (or move) the blue dot at the user's position.
     private fun showUserLocation(latitude: Double, longitude: Double) {
         val map = osmMapView ?: return
         val marker = userMarker ?: Marker(map).also {
@@ -249,7 +236,6 @@ class MapView : Fragment() {
         map.invalidate()
     }
 
-    // A small blue circle with a white border, built in code (no drawable file).
     private fun blueDot(): Drawable {
         val density = resources.displayMetrics.density
         return GradientDrawable().apply {
@@ -260,8 +246,6 @@ class MapView : Fragment() {
         }
     }
 
-    // Keep the map fitted so the user and the challenge both stay visible.
-    // Runs on every new position, so the crop resizes as the user moves.
     private fun frameUserAndTarget(userLatitude: Double, userLongitude: Double) {
         val map = osmMapView ?: return
 
@@ -309,7 +293,7 @@ class MapView : Fragment() {
             Toast.makeText(requireContext(), "Challenge completed: $targetTitle", Toast.LENGTH_LONG).show()
 
             val menu = requireActivity() as? MenuActivity
-            // Open the finished challenge so the user can add a photo of it.
+
             if (finished != null) menu?.showCompletedChallengeInfo(finished)
             else menu?.showCompletedChallenges()
         }
@@ -347,7 +331,6 @@ class MapView : Fragment() {
         private const val NO_TARGET = -1
         private const val COMPLETION_RADIUS_METERS = 30f
 
-        // Go-to a saved challenge: pin + walking route + 30 m completion.
         fun forChallenge(
             id: Int,
             title: String,
@@ -364,7 +347,6 @@ class MapView : Fragment() {
             }
         }
 
-        // Read-only look at a place (a nearby suggestion): just a pin, no completion.
         fun forPreview(title: String, latitude: Double, longitude: Double): MapView {
             return MapView().apply {
                 arguments = Bundle().apply {
@@ -376,7 +358,6 @@ class MapView : Fragment() {
             }
         }
 
-        // General map of the user's area, without auto-loading any challenge.
         fun plain(): MapView {
             return MapView().apply {
                 arguments = Bundle().apply { putString(ARG_MODE, MODE_PLAIN) }

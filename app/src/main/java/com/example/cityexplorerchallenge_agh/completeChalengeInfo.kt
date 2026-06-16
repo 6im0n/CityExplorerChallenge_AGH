@@ -136,7 +136,6 @@ class completeChalengeInfo : Fragment() {
         view?.findViewById<Button>(R.id.addImageButton)?.text = "Change photo"
     }
 
-    // Show the saved address, or look one up from the coordinates if we have none.
     private fun showAddress(view: TextView, stored: String, latitude: Double, longitude: Double) {
         if (stored.isNotBlank() && stored != "Address not available") {
             view.text = "Address: $stored"
@@ -151,7 +150,6 @@ class completeChalengeInfo : Fragment() {
         }
     }
 
-    // Turn coordinates into a street address (best effort).
     private fun lookupAddress(context: Context, latitude: Double, longitude: Double): String {
         if (!Geocoder.isPresent()) return "Not available"
         return try {
@@ -163,7 +161,6 @@ class completeChalengeInfo : Fragment() {
         }
     }
 
-    // Readable date, or "Unknown" if we never stored one.
     private fun formatDate(epochMillis: Long): String {
         if (epochMillis <= 0) return "Unknown"
         val format = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())

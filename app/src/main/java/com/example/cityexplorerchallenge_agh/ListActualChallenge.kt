@@ -96,12 +96,10 @@ class ListActualChallenge : Fragment() {
         }
     }
 
-    // Open the details screen explaining why this challenge was generated.
     private fun openDetails(challenge: ChallengeEntity) {
         (requireActivity() as? MenuActivity)?.showCurrentChallengeDetails(challenge)
     }
 
-    //Radio tapped: select this challenge, asking first if another one is selected.
     private fun onRadioTapped(challenge: ChallengeEntity) {
         val current = selectedChallengeId
         if (current != null && current != challenge.id) {
@@ -111,7 +109,6 @@ class ListActualChallenge : Fragment() {
         }
     }
 
-    //Confirm before replacing an already selected challenge.
     private fun askChangeSelection(challenge: ChallengeEntity) {
         AlertDialog.Builder(requireContext())
             .setTitle("Change selected challenge?")
@@ -122,7 +119,6 @@ class ListActualChallenge : Fragment() {
             .show()
     }
 
-    //Make this challenge the only selected one, then refresh the list.
     private fun applySelection(challenge: ChallengeEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) {
@@ -143,7 +139,6 @@ class ListActualChallenge : Fragment() {
         }
     }
 
-    // simple list adapter that shows one current challenge per row
     private inner class CurrentAdapter(context: Context) : BaseAdapter() {
         private val inflater = LayoutInflater.from(context)
         private val challenges = mutableListOf<ChallengeEntity>()
@@ -173,7 +168,6 @@ class ListActualChallenge : Fragment() {
                 setOnClickListener { onRadioTapped(challenge) }
             }
 
-            // Highlight selected  background.
             val background = if (challenge.selected) R.color.accent_primary else R.color.accent_secondary
             (row as CardView).setCardBackgroundColor(
                 ContextCompat.getColor(requireContext(), background)
@@ -184,7 +178,6 @@ class ListActualChallenge : Fragment() {
             )
             row.findViewById<TextView>(R.id.challengeDistance).text = formatDistance(meters)
 
-            // Tap the row to see why this challenge was generated.
             row.setOnClickListener { openDetails(challenge) }
 
             row.findViewById<Button>(R.id.deleteChallengeButton).setOnClickListener {

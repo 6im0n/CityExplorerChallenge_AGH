@@ -25,10 +25,6 @@ import kotlinx.coroutines.withContext
 import java.time.LocalTime
 import java.util.Locale
 
-/**
- * Explains WHY a challenge was generated: a description, the data the engine
- * used, and the rules behind it. Opened from the current and the new lists.
- */
 class ChallengeDetails : Fragment() {
 
     override fun onCreateView(
@@ -104,7 +100,6 @@ class ChallengeDetails : Fragment() {
         view.findViewById<Button>(R.id.mainMenuButton).setOnClickListener { menu?.showMenu() }
     }
 
-    // Build the explanation off the main thread, then show it.
     private fun loadExplanation(
         view: View,
         title: String,
@@ -128,7 +123,6 @@ class ChallengeDetails : Fragment() {
         }
     }
 
-    // The same context the recommendation engine uses (history, recent, time).
     private fun buildContext(context: Context, userLat: Double, userLon: Double): ChallengeFinder.Context {
         val dao = AppDatabase.get(context).challengeDao()
 
@@ -149,7 +143,6 @@ class ChallengeDetails : Fragment() {
         return ChallengeFinder.Context(userLat, userLon, history, recent, LocalTime.now().hour)
     }
 
-    // Save a new challenge as "current" (same as the Add button in the list).
     private fun addChallenge(
         title: String,
         category: ChallengeCategory?,

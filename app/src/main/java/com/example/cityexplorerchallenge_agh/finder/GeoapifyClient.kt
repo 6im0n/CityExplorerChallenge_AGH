@@ -9,9 +9,6 @@ import java.net.URL
 import java.net.URLEncoder
 
 // Talks to the Geoapify Places API (https://www.geoapify.com/places-api/).
-// Needs an API key in local.properties (GEOAPIFY_API_KEY). Returns real names
-// and addresses.
-// Call findPlaces() from a background thread (it does network I/O).
 class GeoapifyClient {
     private val endpoint = "https://api.geoapify.com/v2/places"
 
@@ -29,7 +26,6 @@ class GeoapifyClient {
         return parseAnswer(answer, categories)
     }
 
-    // Build the request URL: all categories, inside a circle around the user.
     private fun buildUrl(
         latitude: Double,
         longitude: Double,
@@ -42,7 +38,6 @@ class GeoapifyClient {
         return "$endpoint?categories=$cats&filter=$filter&limit=60&apiKey=$apiKey"
     }
 
-    // Read the GeoJSON answer and sort each place into its category.
     private fun parseAnswer(
         json: String,
         categories: List<ChallengeCategory>
@@ -71,13 +66,11 @@ class GeoapifyClient {
         return result
     }
 
-    // The "categories" property is a list of strings like ["leisure.park", ...].
     private fun readCategories(props: JSONObject): List<String> {
         val array = props.optJSONArray("categories") ?: return emptyList()
         return (0 until array.length()).map { array.optString(it) }
     }
 
-    // Minimal HTTP GET that returns the response body as text.
     private fun httpGet(urlString: String): String {
         val connection = URL(urlString).openConnection() as HttpURLConnection
         try {

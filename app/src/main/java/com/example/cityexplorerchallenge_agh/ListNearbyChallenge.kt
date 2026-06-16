@@ -29,9 +29,6 @@ import java.util.Locale
 
 /**
  * "Find new challenge" screen.
- *
- * Flow: read GPS -> ask Geoapify for places -> adapt the mix to the user's
- * history -> show the list. Tapping "Add" saves the challenge as "current".
  */
 class ListNearbyChallenge : Fragment() {
 
@@ -43,7 +40,6 @@ class ListNearbyChallenge : Fragment() {
 
     private val suggestions = mutableListOf<NearbyChallenge>()
 
-    // Where the user is, so each row can show its distance.
     private var userLatitude = 0.0
     private var userLongitude = 0.0
 
@@ -83,7 +79,6 @@ class ListNearbyChallenge : Fragment() {
         loadSuggestions()
     }
 
-    // Ask for a fresh GPS fix, then search around it.
     private fun loadSuggestions() {
         titleText.text = "Finding your location…"
         DeviceLocation().requestFresh(requireContext()) { location ->
@@ -95,7 +90,6 @@ class ListNearbyChallenge : Fragment() {
     }
 
     // Ask Geoapify for up to BUDGET new places, skipping ones already shown or added.
-    // append = false rebuilds the list; append = true adds a fresh batch to it.
     private fun fetchSuggestions(append: Boolean) {
         titleText.text = if (append) "Finding more challenges…" else "Finding nearby challenges…"
         loadMoreButton.isEnabled = false
@@ -137,7 +131,6 @@ class ListNearbyChallenge : Fragment() {
         }
     }
 
-    // Ask Geoapify for places (real names and addresses). Runs on a background thread.
     private fun searchPlaces(
         latitude: Double,
         longitude: Double
@@ -166,7 +159,6 @@ class ListNearbyChallenge : Fragment() {
         return counts
     }
 
-    // How many challenges the user finished in the last 24 h, per category (Rule 2).
     private fun recentlyFinishedCounts(): Map<ChallengeCategory, Int> {
         val since = System.currentTimeMillis() - 24L * 60 * 60 * 1000
         val counts = mutableMapOf<ChallengeCategory, Int>()
@@ -181,7 +173,6 @@ class ListNearbyChallenge : Fragment() {
     }
 
     private fun addChallenge(challenge: NearbyChallenge) {
-        // Remember where the user started from (for the distance travelled stat).
         val startLatitude = userLatitude
         val startLongitude = userLongitude
         val context = requireContext().applicationContext
@@ -207,7 +198,6 @@ class ListNearbyChallenge : Fragment() {
         Toast.makeText(requireContext(), "Added: ${challenge.title}", Toast.LENGTH_SHORT).show()
     }
 
-    // Best-effort city name for a place, used by the history stats.
     private fun lookupCity(context: Context, latitude: Double, longitude: Double): String? {
         if (!Geocoder.isPresent()) return null
         return try {
@@ -239,12 +229,9 @@ class ListNearbyChallenge : Fragment() {
             val row = convertView ?: inflater.inflate(R.layout.item_nearby_challenge, parent, false)
             val challenge = getItem(position)
 
-            // Category in its own colour, then the place name.
             row.findViewById<TextView>(R.id.nearbyCategory).text = challenge.category.label
             row.findViewById<TextView>(R.id.nearbyTitle).text = challenge.title
 
-            // Distance to the place, plus how well it matches (its recommendation
-            // score as a percentage of the best one in the list).
             val meters = DistanceCalcSimple().meters(
                 userLatitude, userLongitude, challenge.latitude, challenge.longitude
             )
@@ -257,7 +244,6 @@ class ListNearbyChallenge : Fragment() {
                 addChallenge(challenge)
             }
 
-            // Tap the row to see why this challenge was generated.
             row.setOnClickListener {
                 (requireActivity() as? MenuActivity)?.showNewChallengeDetails(challenge)
             }
@@ -266,7 +252,6 @@ class ListNearbyChallenge : Fragment() {
         }
     }
 
-    //Friendly distance text for user
     private fun formatDistance(meters: Double): String {
         return if (meters < 1000) "${Math.round(meters)} m"
         else "%.1f km".format(meters / 1000)

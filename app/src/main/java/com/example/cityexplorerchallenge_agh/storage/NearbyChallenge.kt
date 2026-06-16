@@ -7,8 +7,9 @@ data class NearbyChallenge(
     val title: String,
     val category: ChallengeCategory,
     val address: String,
+
     val latitude: Double,
     val longitude: Double,
-    // Recommendation score from the engine (higher = better match). 0 until scored.
+
     val score: Double = 0.0
 )

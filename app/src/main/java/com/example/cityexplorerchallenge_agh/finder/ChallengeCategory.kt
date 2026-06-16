@@ -9,7 +9,7 @@ enum class ChallengeCategory(
     MUSEUM("Museum", "entertainment.museum"),
     PARK("Park", "leisure.park");
 
-    // True if a Geoapify place (its list of category strings) belongs to this category.
+    // True if Geoapify place (its list of category strings) belongs to this category.
     fun matchesGeoapify(categories: List<String>): Boolean =
         categories.any { it == geoapifyCategory || it.startsWith("$geoapifyCategory.") }
 }

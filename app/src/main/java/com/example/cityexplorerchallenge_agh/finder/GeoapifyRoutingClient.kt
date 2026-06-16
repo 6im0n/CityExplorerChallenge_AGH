@@ -9,8 +9,6 @@ import java.net.URL
 import java.net.URLEncoder
 
 // Asks the Geoapify Routing API for a walking route between two points.
-// Returns the road as a list of (latitude, longitude) points to draw on the map.
-// Call walkingRoute() from a background thread (it does network I/O).
 class GeoapifyRoutingClient {
     private val endpoint = "https://api.geoapify.com/v1/routing"
 
@@ -30,7 +28,6 @@ class GeoapifyRoutingClient {
         return parseRoute(answer)
     }
 
-    // The route is in features[0].geometry, as a LineString or a MultiLineString.
     private fun parseRoute(json: String): List<Pair<Double, Double>> {
         val features = JSONObject(json).optJSONArray("features") ?: return emptyList()
         if (features.length() == 0) return emptyList()
@@ -49,7 +46,6 @@ class GeoapifyRoutingClient {
         return points
     }
 
-    // Each coordinate is [longitude, latitude]; we keep them as (lat, lon).
     private fun readLine(line: JSONArray, out: MutableList<Pair<Double, Double>>) {
         for (i in 0 until line.length()) {
             val point = line.getJSONArray(i)
